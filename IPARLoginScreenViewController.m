@@ -161,24 +161,7 @@
 }
 
 - (void)writeAuthToFile {
-    //FIX THIS - YOU CANT CREATE THE FILE YOU WANT, AND YOU ALSO CANT WRITE TO IT..
-    //MAYBE ENTITLEMENTS ISSUE?!!?!?! cant fukcing create a file!
-     NSFileManager *fileManager = [NSFileManager defaultManager];
-    // // Check if the file exists
-    // if (![fileManager fileExistsAtPath:IPARANGER_SETTINGS_DICT]) {
-    //     NSDictionary *data = @{@"AccountEmail": @"--", @"Authenticated": @NO};
-
-    //     NSData *plistData = [NSPropertyListSerialization dataWithPropertyList:data
-    //                                                                 format:NSPropertyListXMLFormat_v1_0
-    //                                                                 options:0 error:nil];
-    //     // Write the plist data to the file
-    //     [plistData writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
-
-    //     // Create the file if it doesn't exist
-    //     [fileManager createFileAtPath:IPARANGER_SETTINGS_DICT contents:nil attributes:nil];
-
-    // }
-    // Get the current permissions
+    NSFileManager *fileManager = [NSFileManager defaultManager];
     NSDictionary *fileAttributes = [fileManager attributesOfItemAtPath:IPARANGER_SETTINGS_DICT error:nil];
     NSMutableDictionary *newFileAttributes = [fileAttributes mutableCopy];
 
@@ -191,6 +174,7 @@
     NSMutableDictionary *settings = [[NSMutableDictionary alloc] initWithContentsOfFile:IPARANGER_SETTINGS_DICT];
     settings[@"Authenticated"] = @YES;
     settings[@"AccountEmail"] = self.emailTextField.text;
+    settings[@"lastLoginDate"] = [NSDate date];
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
     IPARRootViewController *mainVC = [[IPARRootViewController alloc] init];
     [self.navigationController pushViewController:mainVC animated:YES];
