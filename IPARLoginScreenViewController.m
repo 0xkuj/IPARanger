@@ -1,5 +1,5 @@
 #import "IPARLoginScreenViewController.h"
-#import "IPARRootViewController.h"
+#import "IPARSearchViewController.h"
 #import "IPARUtils.h"
 
 #define sha256verification @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b"
@@ -142,7 +142,7 @@
     settings[@"AccountEmail"] = self.emailTextField.text;
     settings[@"lastLoginDate"] = [NSDate date];
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
-    IPARRootViewController *mainVC = [[IPARRootViewController alloc] init];
-    [self.navigationController pushViewController:mainVC animated:YES];
+    IPARSearchViewController *mainSearchVC = [[IPARSearchViewController alloc] init];
+    [self.navigationController pushViewController:mainSearchVC animated:YES];
 }
 @end

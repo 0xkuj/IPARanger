@@ -8,12 +8,11 @@
 @implementation IPARRootViewController
 
 // - (void)loadView {
-// 	[super loadView];
-
-// 	_objects = [NSMutableArray array];
-//   _searchResults = [NSMutableArray array];
-// 	self.title = @"IPA Ranger";
-// 	self.navigationItem.leftBarButtonItem = self.editButtonItem;
+//     [super loadView];
+//     _objects = [NSMutableArray array];
+//     _searchResults = [NSMutableArray array];
+//     self.title = @"IPA Ranger";
+//     self.navigationItem.leftBarButtonItem = self.editButtonItem;
 //   [self _setUpNavigationBar];
 //   self.tableView.dataSource = self;
 //   self.tableView.delegate = self;

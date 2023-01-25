@@ -3,6 +3,7 @@
 #import <Foundation/Foundation.h>
 #import "IPARLoginScreenViewController.h"
 #import "IPARUtils.h"
+#import "IPARSearchViewController.h"
 
 @implementation IPARAppDelegate
 
@@ -14,7 +15,7 @@
 	NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
 	if ([settings[@"Authenticated"] boolValue] == YES) {
-		_rootViewController = [[UINavigationController alloc] initWithRootViewController:[[IPARRootViewController alloc] init]];
+		_rootViewController = [[UINavigationController alloc] initWithRootViewController:[[IPARSearchViewController alloc] init]];
 	} else {
 		_rootViewController = [[UINavigationController alloc] initWithRootViewController:[[IPARLoginScreenViewController alloc] init]];
 	}
