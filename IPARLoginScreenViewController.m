@@ -73,30 +73,18 @@
     self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
     self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
 
-    for (id obj in self.linesStandardOutput) {
-        NSLog(@"omriku line output :%@", obj);
-        if ([obj containsString:@"Authenticated as"]) {
-            [self writeAuthToFile];
-        } else {
-            //possible errors:
-            //email missing
-            //pass missing
-            //something with 2fa.. not sure.
-            //looks like we can say its an error ONLY AFTER 2FA IS WRONG.
-            //handle errors.. present them at least. we are expecting for this to work in standardoutput after login.
-        }
-    }
-
-    for (id obj in self.linesErrorOutput) {
-        NSLog(@"omriku line error :%@", obj);
-        if ([obj containsString:@"2FA"]) {
-            [self handle2FADialog];
-        } else {
-            if ([obj containsString:@"Missing value for"]) {
-                [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+    if ([self checkIfUserPassedAuthentication] == NO) {
+        for (id obj in self.linesErrorOutput) {
+            NSLog(@"omriku line error :%@", obj);
+            if ([obj containsString:@"2FA"]) {
+                [self handle2FADialog];
+            } else {
+                if ([obj containsString:@"Missing value for"]) {
+                    [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                }
+                //do we actually can get error here? dont think so.. need to check.
+                //handle errors.. we are expecting to see only 2fa errors here. if not, present them!
             }
-            //do we actually can get error here? dont think so.. need to check.
-            //handle errors.. we are expecting to see only 2fa errors here. if not, present them!
         }
     }
 }
@@ -107,7 +95,6 @@
         // Retrieve the text entered in the text field
         UITextField *textField = alert.textFields.firstObject;
         NSString *twoFAResponse = textField.text;
-        NSLog(@"omriku 2fa");
         [self handle2FALogic:twoFAResponse];
     }];
 
@@ -128,38 +115,33 @@
     self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
     self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
 
-    for (id obj in self.linesStandardOutput) {
-         if ([obj containsString:@"Authenticated as"]) {
-            [self writeAuthToFile];
+    if ([self checkIfUserPassedAuthentication] == NO) {
+        for (id obj in self.linesErrorOutput) {
+            NSLog(@"omriku line error :%@", obj);
+            if ([obj containsString:@"An unknown error has occurred"]) {
+                [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Couldn't log you in, Something is wrong with your credentials.\nPlease try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
+            }
         }
-        NSLog(@"omriku line output :%@", obj);
-    }
-
-    for (id obj in self.linesErrorOutput) {
-        if ([obj containsString:@"An unknown error has occurred"]) {
-            [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Couldn't log you in, Something is wrong with your credentials.\nPlease try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
-            //NSLog(@"omriku CRITICAL ERROR. SOMETHING WRONG WITH YOUR CREDS. TRY AGAIN AND CHECK!");
-        }
-        NSLog(@"omriku line error :%@", obj);
     }
 }
 
+- (BOOL)checkIfUserPassedAuthentication {
+    for (id obj in self.linesStandardOutput) {
+        NSLog(@"omriku line output :%@", obj);
+        if ([obj containsString:@"Authenticated as"]) {
+            [self writeAuthToFile];
+            return YES;
+        }
+    }
+    return NO;
+}
+
 - (void)writeAuthToFile {
-    // NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    // NSString *documentsDirectory = [paths objectAtIndex:0];
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     settings[@"Authenticated"] = @YES;
     settings[@"AccountEmail"] = self.emailTextField.text;
     settings[@"lastLoginDate"] = [NSDate date];
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
-    // NSLog(@"omriku trying to write to file.. %@", [NSString stringWithFormat:@"%@/IPARanger/com.0xkuj.check.plist",documentsDirectory]);
-    // NSDictionary *harta = @{@"array1": @"asd", @"array2": @"dddd"};
-    // NSError *errorPtr = nil;
-    // NSData *data = [NSJSONSerialization dataWithJSONObject:harta options:0 error:&errorPtr];
-    // [data writeToFile:[NSString stringWithFormat:@"%@/IPARanger/com.0xkuj.check.plist",documentsDirectory] options:0 error:&errorPtr];
-    // if (errorPtr != nil) {
-    //      NSLog(@"omriku error saving file %@ in path: %@", errorPtr, documentsDirectory);
-    // }
     IPARRootViewController *mainVC = [[IPARRootViewController alloc] init];
     [self.navigationController pushViewController:mainVC animated:YES];
 }

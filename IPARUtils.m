@@ -73,7 +73,7 @@
     NSData *errorData = [[errorPipe fileHandleForReading] readDataToEndOfFile];
     NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
 
-    NSLog(@"omriku reading outputstring.. command: %@ %@",task.launchPath, [task.arguments componentsJoinedByString:@" "]);
+    NSLog(@"omriku ran command with args: %@ %@",task.launchPath, [task.arguments componentsJoinedByString:@" "]);
     NSArray *standardOutputArray = [outputString componentsSeparatedByCharactersInSet:
                                             [NSCharacterSet newlineCharacterSet]];
 
