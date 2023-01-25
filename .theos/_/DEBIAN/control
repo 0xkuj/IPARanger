@@ -1,9 +1,0 @@
-Package: com.0xkuj.iparanger
-Name: IPA Ranger
-Architecture: iphoneos-arm
-Description: An awesome application!
-Maintainer: 0xkuj
-Author: 0xkuj
-Section: Utilities
-Version: 0.0.1
-Installed-Size: 2712
