@@ -1,23 +1,25 @@
 #import "IPARLoginScreenViewController.h"
 #import "IPARRootViewController.h"
+#import "IPARUtils.h"
 
-#pragma clang diagnostic ignored "-Wunused-variable"
-#define IPATOOL_SCRIPT_PATH @"/Applications/IPARanger.app/ipatool/ipatool"
-#define IPARANGER_SETTINGS_DICT @"/var/mobile/Library/Preferences/IPARanger/com.0xkuj.iparangersettings.plist"
+#define sha256verification @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b"
 
 @interface IPARLoginScreenViewController ()
 @property (nonatomic) IBOutlet UITextField *emailTextField;
 @property (nonatomic) IBOutlet UITextField *passwordTextField;
 @property (nonatomic) UIButton *loginButton;
-@property (nonatomic, strong) NSArray *linesStandardOutput;
-@property (nonatomic, strong) NSArray *linesErrorOutput;
+@property (nonatomic, strong) NSMutableArray *linesStandardOutput;
+@property (nonatomic, strong) NSMutableArray *linesErrorOutput;
 @end
 
 @implementation IPARLoginScreenViewController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    _linesStandardOutput = [NSMutableArray array];
+    _linesErrorOutput = [NSMutableArray array];
     [self setLoginButtons];
+    [self basicSanityChecks];
     [self.view addSubview:_emailTextField];
     [self.view addSubview:_passwordTextField];
     [self.view addSubview:_loginButton];
@@ -49,51 +51,27 @@
     self.loginButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.loginButton setTitle:@"Login" forState:UIControlStateNormal];
     self.loginButton.frame = CGRectMake(20, 200, 280, 40);
-    [self.loginButton addTarget:self action:@selector(loginButtonTapped:) forControlEvents:UIControlEventTouchUpInside];
+    [self.loginButton addTarget:self action:@selector(handleLoginEmailPass) forControlEvents:UIControlEventTouchUpInside];
 }
 
-
-- (IBAction)loginButtonTapped:(id)sender {
-
-    //why is this all needed..? can we call handleLoginEmailPass directly?!?! maybe here we can check if binary exists.. its good.
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-	// Get the resource path
-	NSString *resourcePath = [[NSBundle mainBundle] resourcePath];
-	// Get the contents of the resource directory
-	NSError *error = nil;
-	NSString *scriptPath = [NSString stringWithFormat:@"%@/ipatool", resourcePath];
-	NSArray *files = [fileManager contentsOfDirectoryAtPath:scriptPath error:&error];
-    BOOL checkIfBinaryExists = NO;
-
-	if (error) {
-		NSLog(@"omriku Error getting files from resource directory: %@", error);
-	} else {
-		// Iterate through the files
-		for (NSString *file in files) {
-            if ([file isEqualToString:@"ipatool"]) {
-                NSLog(@"omriku ipatool binary was found. all good!");
-                checkIfBinaryExists = YES;
-                break;
-            }
-		}
-        if (checkIfBinaryExists == NO) {
-            NSLog(@"omriku CRITICAL: ipatool binary WAS NOT FOUND!");
-        }
-	}
-	
-	//file not found. wtf? maybe cancel -c or break the command into multiple arguments. create array and stuff.
-	//scriptPath = [NSString stringWithFormat:@"%@/ipatool/ipatool", resourcePath];
-	//NSLog(@"omriku cmd? %@:",CMD(scriptPath));
-	//works this way. no need to split arguments.
-	//NSLog(@"omriku cmd? %@:",CMD(@"/Applications/IPARanger.app/ipatool/ipatool search --limit 1 faceboo"));
-	//this works. this will be the first login screen..
-    //after you will recognize 2fa is required, you will popup a window that will recall auth login with the 2fa after the -p password stuff..
-    [self handleLoginEmailPass];
+- (void)basicSanityChecks {
+    NSString *s = [IPARUtils sha256ForFileAtPath:IPATOOL_SCRIPT_PATH];
+    AlertActionBlock alertBlock = ^(void) {
+        exit(0);
+    };
+    if (s == nil) {
+        [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"ipatool file was not found inside resources directory!" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
+    } else if (![s isEqualToString:sha256verification]) {
+        [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Could not verify the integrity of files" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
+    }
+    NSLog(@"omriku ipatool binary was found. all good!");
 }
 
 - (void)handleLoginEmailPass {
     NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text];
-    [self setupTaskAndPipesWithCommand:commandToExecute];
+    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
+    self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
+    self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
 
     for (id obj in self.linesStandardOutput) {
         NSLog(@"omriku line output :%@", obj);
@@ -114,6 +92,9 @@
         if ([obj containsString:@"2FA"]) {
             [self handle2FADialog];
         } else {
+            if ([obj containsString:@"Missing value for"]) {
+                [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+            }
             //do we actually can get error here? dont think so.. need to check.
             //handle errors.. we are expecting to see only 2fa errors here. if not, present them!
         }
@@ -143,8 +124,10 @@
 
 - (void)handle2FALogic:(NSString *)twoFARes {
     NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@%@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text, twoFARes];
-    [self setupTaskAndPipesWithCommand:commandToExecute];
-    
+    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
+    self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
+    self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+
     for (id obj in self.linesStandardOutput) {
          if ([obj containsString:@"Authenticated as"]) {
             [self writeAuthToFile];
@@ -154,99 +137,30 @@
 
     for (id obj in self.linesErrorOutput) {
         if ([obj containsString:@"An unknown error has occurred"]) {
-            NSLog(@"omriku CRITICAL ERROR. SOMETHING WRONG WITH YOUR CREDS. TRY AGAIN AND CHECK!");
+            [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Couldn't log you in, Something is wrong with your credentials.\nPlease try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
+            //NSLog(@"omriku CRITICAL ERROR. SOMETHING WRONG WITH YOUR CREDS. TRY AGAIN AND CHECK!");
         }
         NSLog(@"omriku line error :%@", obj);
     }
 }
 
 - (void)writeAuthToFile {
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    NSDictionary *fileAttributes = [fileManager attributesOfItemAtPath:IPARANGER_SETTINGS_DICT error:nil];
-    NSMutableDictionary *newFileAttributes = [fileAttributes mutableCopy];
-
-    // Set permissions to all
-    newFileAttributes[NSFilePosixPermissions] = @(0777);
-
-    // Update the permissions
-    [fileManager setAttributes:newFileAttributes ofItemAtPath:IPARANGER_SETTINGS_DICT error:nil];
-
-    NSMutableDictionary *settings = [[NSMutableDictionary alloc] initWithContentsOfFile:IPARANGER_SETTINGS_DICT];
+    // NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    // NSString *documentsDirectory = [paths objectAtIndex:0];
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     settings[@"Authenticated"] = @YES;
     settings[@"AccountEmail"] = self.emailTextField.text;
     settings[@"lastLoginDate"] = [NSDate date];
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
+    // NSLog(@"omriku trying to write to file.. %@", [NSString stringWithFormat:@"%@/IPARanger/com.0xkuj.check.plist",documentsDirectory]);
+    // NSDictionary *harta = @{@"array1": @"asd", @"array2": @"dddd"};
+    // NSError *errorPtr = nil;
+    // NSData *data = [NSJSONSerialization dataWithJSONObject:harta options:0 error:&errorPtr];
+    // [data writeToFile:[NSString stringWithFormat:@"%@/IPARanger/com.0xkuj.check.plist",documentsDirectory] options:0 error:&errorPtr];
+    // if (errorPtr != nil) {
+    //      NSLog(@"omriku error saving file %@ in path: %@", errorPtr, documentsDirectory);
+    // }
     IPARRootViewController *mainVC = [[IPARRootViewController alloc] init];
     [self.navigationController pushViewController:mainVC animated:YES];
 }
-
-- (void)setupTaskAndPipesWithCommand:(NSString *)command {
-    NSLog(@"omriku running command.. %@", command);
-    NSTask *task = [[NSTask alloc] init];
-    NSMutableArray *args = [NSMutableArray array];
-    [args addObject:@"-c"];
-    [args addObject:command];
-    [task setLaunchPath:@"/bin/sh"];
-    [task setArguments:args];
-    NSPipe *outputPipe = [NSPipe pipe];
-    NSPipe *errorPipe = [NSPipe pipe];
-    [task setStandardError:errorPipe];
-    [task setStandardOutput:outputPipe];
-    [task launch];
-
-    NSData *outputData = [[outputPipe fileHandleForReading] readDataToEndOfFile];
-    NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
-
-    NSData *errorData = [[errorPipe fileHandleForReading] readDataToEndOfFile];
-    NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
-
-    NSLog(@"omriku reading outputstring.. command: %@ %@",task.launchPath, [task.arguments componentsJoinedByString:@" "]);
-    self.linesStandardOutput = [outputString componentsSeparatedByCharactersInSet:
-                                            [NSCharacterSet newlineCharacterSet]];
-
-    self.linesErrorOutput = [errorOutput componentsSeparatedByCharactersInSet:
-                                            [NSCharacterSet newlineCharacterSet]];
-}
-// NSString *CMD(NSString *CMD) {
-        
-//    NSTask *task = [[NSTask alloc] init];
-//    NSMutableArray *args = [NSMutableArray array];
-//    [args addObject:@"-c"];
-//    [args addObject:CMD];
-//    [task setLaunchPath:@"/bin/sh"];
-//    [task setArguments:args];
-//    NSPipe *outputPipe = [NSPipe pipe];
-//    NSPipe *errorPipe = [NSPipe pipe];
-//    [task setStandardError:errorPipe];
-//    [task setStandardOutput:outputPipe];
-//    [task launch];
-//    NSData *outputData = [[outputPipe fileHandleForReading] readDataToEndOfFile];
-//    NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
-
-//    NSData *errorData = [[errorPipe fileHandleForReading] readDataToEndOfFile];
-//    NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
-
-//    NSLog(@"omriku reading outputstring.. command: %@ %@",task.launchPath, [task.arguments componentsJoinedByString:@" "]);
-//    NSArray *linesOutput = [outputString componentsSeparatedByCharactersInSet:
-// 										[NSCharacterSet newlineCharacterSet]];
-
-//    NSArray *linesError = [errorOutput componentsSeparatedByCharactersInSet:
-// 										[NSCharacterSet newlineCharacterSet]];
-//    for (id obj in linesOutput) {
-//       NSLog(@"omriku line output :%@", obj);
-//       if ([obj containsString:@"Authenticated as"]) {
-//         return @"Success";
-//       }
-//    }
-
-//    for (id obj in linesError) {
-//       NSLog(@"omriku line error :%@", obj);
-//       if ([obj containsString:@"2FA"]) {
-//         return @"2FA";
-//       }
-//    }
-
-//    //returns one line, this is shit basically..
-//    return outputString;
-// }
 @end

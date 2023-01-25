@@ -8,5 +8,6 @@ APPLICATION_NAME = IPARanger
 IPARanger_FILES = main.m $(wildcard IPAR*.m)
 IPARanger_FRAMEWORKS = UIKit CoreGraphics
 IPARanger_CFLAGS = -fobjc-arc
+IPARanger_CODESIGN_FLAGS = -Sentitlements.plist
 
 include $(THEOS_MAKE_PATH)/application.mk

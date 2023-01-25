@@ -2,7 +2,7 @@
 #import "IPARRootViewController.h"
 #import <Foundation/Foundation.h>
 #import "IPARLoginScreenViewController.h"
-#pragma clang diagnostic ignored "-Wunused-variable"
+#import "IPARUtils.h"
 
 @implementation IPARAppDelegate
 
@@ -12,7 +12,7 @@
 	//if will try to download and get token error or something, just logout, and change the value in plist.
 	//or actually think of a much better safer way, this is stupid.
 	NSMutableDictionary *settings = [NSMutableDictionary dictionary];
-    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:@"/var/mobile/Library/Preferences/IPARanger/com.0xkuj.iparangersettings.plist"]];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
 	if ([settings[@"Authenticated"] boolValue] == YES) {
 		_rootViewController = [[UINavigationController alloc] initWithRootViewController:[[IPARRootViewController alloc] init]];
 	} else {
