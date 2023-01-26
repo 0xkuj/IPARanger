@@ -1,5 +1,6 @@
 #import "IPARLoginScreenViewController.h"
 #import "IPARSearchViewController.h"
+#import "IPARDownloadViewController.h"
 #import "IPARUtils.h"
 
 #define sha256verification @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b"
@@ -142,7 +143,25 @@
     settings[@"AccountEmail"] = self.emailTextField.text;
     settings[@"lastLoginDate"] = [NSDate date];
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
-    IPARSearchViewController *mainSearchVC = [[IPARSearchViewController alloc] init];
-    [self.navigationController pushViewController:mainSearchVC animated:YES];
+    UITabBarController *tabBarController = [[UITabBarController alloc] init];
+    // Create the first view controller
+    IPARSearchViewController *firstViewController = [[IPARSearchViewController alloc] init];
+    firstViewController.title = @"IPARanger - Search";
+    firstViewController.tabBarItem.image = [UIImage systemImageNamed:@"magnifyingglass"];
+    firstViewController.tabBarItem.title = @"Search";
+    // Create the navigation controller for the first view controller
+    UINavigationController *firstNavigationController = [[UINavigationController alloc] initWithRootViewController:firstViewController];
+    // Create the second view controller
+    IPARDownloadViewController *secondViewController = [[IPARDownloadViewController alloc] init];
+    secondViewController.title = @"IPARanger - Download";
+    secondViewController.tabBarItem.image = [UIImage systemImageNamed:@"square.stack.3d.up"];
+    secondViewController.tabBarItem.title = @"Download";
+    // Create the navigation controller for the second view controller
+    UINavigationController *secondNavigationController = [[UINavigationController alloc] initWithRootViewController:secondViewController];
+    // Add the navigation controllers to the tab bar controller
+    tabBarController.viewControllers = @[firstNavigationController, secondNavigationController];    
+    // Set the tab bar controller as the root view controller
+    UIWindow *window = UIApplication.sharedApplication.delegate.window;
+    window.rootViewController = tabBarController;
 }
 @end

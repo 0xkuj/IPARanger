@@ -1,6 +1,7 @@
 #import <CommonCrypto/CommonDigest.h>
 #pragma clang diagnostic ignored "-Wunused-variable"
 #define IPATOOL_SCRIPT_PATH @"/Applications/IPARanger.app/ipatool/ipatool"
+#define IPARANGER_DOCUMENTS_LIBRARY @"/var/mobile/Documents/IPARanger/"
 #define IPARANGER_SETTINGS_DICT @"/var/mobile/Documents/IPARanger/com.0xkuj.iparangersettings.plist"
 
 @interface NSTask : NSObject
