@@ -4,6 +4,9 @@
 @interface IPARDownloadViewController ()
 @property (nonatomic, strong) NSMutableArray *appsBeingDownloaded;
 @property (nonatomic, strong) NSMutableArray *existingApps;
+@property (nonatomic) UIProgressView *progressView;
+@property (nonatomic) NSString *currentPrecentageDownload;
+@property (nonatomic) UIViewController *downloadViewController;
 @end
 
 //IMPLEMENT SELECT COUNTRY!
@@ -13,11 +16,25 @@
     //in case i want to add percatnage to downloaded app.. but probably we will do it in nice UI and not in shit cell. after done, reload table.
     _appsBeingDownloaded = [NSMutableArray array];
     _existingApps = [NSMutableArray array];
+    _currentPrecentageDownload = [NSString string];
+    [self setupDownloadViewControllerStyle];
+    _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+    _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
     [self populateTableWithExistingApps];
     self.navigationItem.leftBarButtonItem = self.editButtonItem;
     [self _setUpNavigationBar2];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
+}
+
+// I THINK ALERT CONTROLLER WILL BE THE BEST OPTION HERE. LESS BUGS.!
+- (void)setupDownloadViewControllerStyle {
+    self.downloadViewController = [[UIViewController alloc] init];
+    self.downloadViewController.view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.5];
+    self.downloadViewController.modalPresentationStyle = UIModalPresentationOverCurrentContext;
+    self.downloadViewController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
+    //self.downloadViewController.modalPresentationStyle = UIModalPresentationOverCurrentContext;
+    //self.downloadViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
 }
 
 - (void)_setUpNavigationBar2
@@ -145,6 +162,8 @@
 	[tableView deselectRowAtIndexPath:indexPath animated:YES];
 }
 
+//==> ❌  [Error] The country provided does not match with the account you are using. Supply a valid country using the "--country" flag
+//==> ❌  [Error] Token expired. Login again using the "auth" command.
  -(void)testing:(NSString *)command {
     NSLog(@"omriku in testing, command %@", command);
     NSTask *task = [[NSTask alloc] init];
@@ -154,22 +173,45 @@
     [task setLaunchPath:@"/bin/sh"];
     [task setArguments:args];
     // Create a pipe for the task's standard output
-    NSPipe *pipe = [NSPipe pipe];
-    task.standardOutput = pipe;
+    NSPipe *outputPipe = [NSPipe pipe];
+    [task setStandardOutput:outputPipe];
+    // NSPipe *errorPipe = [NSPipe pipe];
+    // [task setStandardError:errorPipe];
 
-    [[pipe fileHandleForReading] waitForDataInBackgroundAndNotify];
+    // NSData *outputData = [[outputPipe fileHandleForReading] readDataToEndOfFile];
+    // NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
+
+    // NSData *errorData = [[errorPipe fileHandleForReading] readDataToEndOfFile];
+    // NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
+
+    // NSLog(@"omriku ran command with args: %@ %@",task.launchPath, [task.arguments componentsJoinedByString:@" "]);
+    // NSArray *standardOutputArray = [outputString componentsSeparatedByCharactersInSet:
+    //                                         [NSCharacterSet newlineCharacterSet]];
+
+    // NSArray *errorOutputArray = [errorOutput componentsSeparatedByCharactersInSet:
+    //                                         [NSCharacterSet newlineCharacterSet]];
+
+    // for (id obj in standardOutputArray) {
+    //     NSLog(@"omriku line output :%@", obj);
+    // }
+    // for (id obj in errorOutputArray) {
+    //     NSLog(@"omriku error output :%@", obj);
+    // }
+
+    [[outputPipe fileHandleForReading] waitForDataInBackgroundAndNotify];
     NSLog(@"omriku sigining to notif..");
     // Register for notifications when new data is available to read
     [[NSNotificationCenter defaultCenter] addObserver:self
                                             selector:@selector(receivedData:)
                                                 name:NSFileHandleDataAvailableNotification
-                                            object:[pipe fileHandleForReading]];
+                                            object:[outputPipe fileHandleForReading]];
 
     // Start the task
     [task launch];
  }
 
 - (void)receivedData:(NSNotification *)notification {
+    static int downloadInProgress = 0;
     // Read the data from the pipe
     NSData *data = [[notification object] availableData];
 
@@ -181,14 +223,23 @@
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\[(\\d+)%\\]" options:0 error:nil];
     NSArray *matches = [regex matchesInString:output options:0 range:NSMakeRange(0, output.length)];
     for (NSTextCheckingResult *match in matches) {
+        if (downloadInProgress++ == 0) {
+            //call UI updates??
+            [self showDownloadDialog];
+        }
         // Extract the percentage from the match
         NSString *percentage = [output substringWithRange:[match rangeAtIndex:1]];
         NSLog(@"omriku Percentage: %@%%", percentage);
+        self.currentPrecentageDownload = percentage;
+        [self performSelectorOnMainThread:@selector(updateProgressBar) withObject:nil waitUntilDone:NO];
         if ([percentage containsString:@"100"]) {
             NSLog(@"omriku have 100!");
+            [[NSNotificationCenter defaultCenter] removeObserver:self];
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                 [self populateTableWithExistingApps];
             });
+            downloadInProgress = 0;
+
         }
     }
 
@@ -196,4 +247,27 @@
     [[notification object] waitForDataInBackgroundAndNotify];
 }
 
+- (void)showDownloadDialog {
+    // UIView *overlayView = [[UIView alloc] initWithFrame:self.tableView.frame];
+    // overlayView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.5];
+    // overlayView.userInteractionEnabled = NO;
+    // [newViewController.view addSubview:overlayView];
+    //this will force me to see the whole page (presetnviewcontroller)
+    [self presentViewController:self.downloadViewController animated:YES completion:nil];
+    //this will work but will let me keep pressing buttons.
+   //[self.view addSubview:self.downloadViewController.view];
+    //consider - customized alert controller? but it will disable your tabs.. not sure you want to do this.
+    // Create the progress view
+    // UIProgressView *progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+    // progressView.center = 
+    [self.downloadViewController.view addSubview:self.progressView];
+}
+
+- (void)updateProgressBar {
+    NSLog(@"omriku updateing progress bar with.. %f", [self.currentPrecentageDownload floatValue]/100);
+    [self.progressView setProgress:[self.currentPrecentageDownload floatValue]/100];
+    // if ([self.currentPrecentageDownload floatValue] == 100.0f) {
+    //     [dialog dismissViewControllerAnimated:YES completion:nil];
+    // }
+}
 @end
