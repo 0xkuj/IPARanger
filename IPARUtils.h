@@ -9,6 +9,7 @@
 @property (retain) id standardOutput; 
 @property (retain) id standardError; 
 @property (readonly) int terminationStatus; 
+@property (readonly) int processIdentifier;
 -(void)waitUntilExit;
 -(id)launchPath;
 -(void)launch;
@@ -20,7 +21,11 @@ typedef void (^AlertActionBlock)(void);
 
 @interface IPARUtils : NSObject
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command;
-+ (void)presentErrorWithTitle:(NSString *)title message:(NSString *)message numberOfActions:(NSUInteger)numberOfActions buttonText:(NSString *)buttonText alertBlock:(AlertActionBlock)block presentOn:(id)viewController;
++ (void)presentMessageWithTitle:(NSString *)title message:(NSString *)message numberOfActions:(NSUInteger)numberOfActions buttonText:(NSString *)buttonText alertBlock:(AlertActionBlock)block presentOn:(id)viewController;
 + (NSString *)sha256ForFileAtPath:(NSString *)filePath;
++ (void)loginToFile:(NSString *)userEmail;
++ (void)logoutToFile;
++ (void)cancelScript;
+
 @end
 

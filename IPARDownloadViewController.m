@@ -1,4 +1,5 @@
 #import "IPARDownloadViewController.h"
+#import "IPARLoginScreenViewController.h"
 #import "IPARUtils.h"
 
 @interface IPARDownloadViewController ()
@@ -7,7 +8,12 @@
 @property (nonatomic) UIProgressView *progressView;
 @property (nonatomic) NSString *currentPrecentageDownload;
 @property (nonatomic) UIViewController *downloadViewController;
+@property (nonatomic) UIAlertController *downloadAlertController;
+@property (nonatomic, strong) NSMutableArray *linesErrorOutput;
+@property (nonatomic) NSString *lastBundleDownload;
 @end
+
+int pid;
 
 //IMPLEMENT SELECT COUNTRY!
 @implementation IPARDownloadViewController
@@ -17,6 +23,13 @@
     _appsBeingDownloaded = [NSMutableArray array];
     _existingApps = [NSMutableArray array];
     _currentPrecentageDownload = [NSString string];
+    _lastBundleDownload = [NSString string];
+    _linesErrorOutput = [NSMutableArray array];
+    _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        [self stopScriptAndRemoveObserver];
+    }];
+    [self.downloadAlertController addAction:cancelAction];
     [self setupDownloadViewControllerStyle];
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
@@ -30,11 +43,9 @@
 // I THINK ALERT CONTROLLER WILL BE THE BEST OPTION HERE. LESS BUGS.!
 - (void)setupDownloadViewControllerStyle {
     self.downloadViewController = [[UIViewController alloc] init];
-    self.downloadViewController.view.backgroundColor = [UIColor colorWithWhite:0 alpha:0.5];
+    self.downloadViewController.view.backgroundColor = [UIColor blackColor];//[UIColor colorWithWhite:0 alpha:0.5];
     self.downloadViewController.modalPresentationStyle = UIModalPresentationOverCurrentContext;
     self.downloadViewController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
-    //self.downloadViewController.modalPresentationStyle = UIModalPresentationOverCurrentContext;
-    //self.downloadViewController.modalTransitionStyle = UIModalTransitionStyleCrossDissolve;
 }
 
 - (void)_setUpNavigationBar2
@@ -57,10 +68,26 @@
 
 	UIAction *logoutAction = [UIAction actionWithTitle:@"Logout" image:[UIImage systemImageNamed:@"arrow.right"] identifier:@"IPARangerLogout" handler:^(__kindof UIAction *action)
 	{
-		dispatch_async(dispatch_get_main_queue(), ^
-		{
+        // self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+        NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", IPATOOL_SCRIPT_PATH]];
+        if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
+        {
+            AlertActionBlock alertBlock = ^(void) {
+                NSLog(@"omriku logout ok!");
+                IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
+                // Step 1: Pop all view controllers from the navigation stack
+                [self.navigationController popToRootViewControllerAnimated:NO];
+                // Step 2: Remove the tabbarcontroller from the window's rootViewController
+                [self.tabBarController.view removeFromSuperview];
+                // Step 3: Instantiate your login screen view controller and set it as the new rootViewController of the window
+                UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
+                UIWindow *window = UIApplication.sharedApplication.delegate.window;
+                window.rootViewController = navController;
+                [IPARUtils logoutToFile];  
+            };
 
-		});
+            [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertBlock:alertBlock presentOn:self];
+        }
 	}];
 
 	UIMenu* menu = [UIMenu menuWithChildren:@[accountAction, creditsAction, logoutAction]];
@@ -108,9 +135,20 @@
     UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"Download" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         // Retrieve the text entered in the text field
         UITextField *textField = alert.textFields.firstObject;
-        NSString *bundleToDownload = textField.text;
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c US", IPATOOL_SCRIPT_PATH, bundleToDownload, IPARANGER_DOCUMENTS_LIBRARY];
-        [self testing:commandToExecute];
+        self.lastBundleDownload = textField.text;
+        //[self presentViewController:self.downloadViewController animated:YES completion:nil];
+        [self showDownloadDialog];
+        self.currentPrecentageDownload = 0;
+        [self.progressView setProgress:0.0f];
+        NSLog(@"omriku sigining notif..");
+        [[NSNotificationCenter defaultCenter] addObserver:self
+                                              selector:@selector(receivedData:)
+                                              name:NSFileHandleDataAvailableNotification
+                                              object:nil];
+        
+        NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c US", IPATOOL_SCRIPT_PATH, self.lastBundleDownload, IPARANGER_DOCUMENTS_LIBRARY];
+        //here we dont deal with errors since 'download' keyword throws notification
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     }];
 
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
@@ -164,52 +202,7 @@
 
 //==> ❌  [Error] The country provided does not match with the account you are using. Supply a valid country using the "--country" flag
 //==> ❌  [Error] Token expired. Login again using the "auth" command.
- -(void)testing:(NSString *)command {
-    NSLog(@"omriku in testing, command %@", command);
-    NSTask *task = [[NSTask alloc] init];
-    NSMutableArray *args = [NSMutableArray array];
-    [args addObject:@"-c"];
-    [args addObject:command];
-    [task setLaunchPath:@"/bin/sh"];
-    [task setArguments:args];
-    // Create a pipe for the task's standard output
-    NSPipe *outputPipe = [NSPipe pipe];
-    [task setStandardOutput:outputPipe];
-    // NSPipe *errorPipe = [NSPipe pipe];
-    // [task setStandardError:errorPipe];
-
-    // NSData *outputData = [[outputPipe fileHandleForReading] readDataToEndOfFile];
-    // NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
-
-    // NSData *errorData = [[errorPipe fileHandleForReading] readDataToEndOfFile];
-    // NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
-
-    // NSLog(@"omriku ran command with args: %@ %@",task.launchPath, [task.arguments componentsJoinedByString:@" "]);
-    // NSArray *standardOutputArray = [outputString componentsSeparatedByCharactersInSet:
-    //                                         [NSCharacterSet newlineCharacterSet]];
-
-    // NSArray *errorOutputArray = [errorOutput componentsSeparatedByCharactersInSet:
-    //                                         [NSCharacterSet newlineCharacterSet]];
-
-    // for (id obj in standardOutputArray) {
-    //     NSLog(@"omriku line output :%@", obj);
-    // }
-    // for (id obj in errorOutputArray) {
-    //     NSLog(@"omriku error output :%@", obj);
-    // }
-
-    [[outputPipe fileHandleForReading] waitForDataInBackgroundAndNotify];
-    NSLog(@"omriku sigining to notif..");
-    // Register for notifications when new data is available to read
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                            selector:@selector(receivedData:)
-                                                name:NSFileHandleDataAvailableNotification
-                                            object:[outputPipe fileHandleForReading]];
-
-    // Start the task
-    [task launch];
- }
-
+//==> ❌  [Error] Could not find ap
 - (void)receivedData:(NSNotification *)notification {
     static int downloadInProgress = 0;
     // Read the data from the pipe
@@ -218,15 +211,21 @@
     // Convert the data to a string
     NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     //NSLog(@"omriku Output: %@", output);
+   
+    if ([output containsString:@"Error"]) {
+        //[self.downloadAlertController dismissViewControllerAnimated:YES completion:nil];
+        [self.downloadAlertController dismissViewControllerAnimated:YES completion:^{
+        // code to be executed after the alert controller is dismissed
+             [self showErrorDialog:output];
+        }];
+        [self stopScriptAndRemoveObserver];
+        return;
+    }
 
     // Check the percentage
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"\\[(\\d+)%\\]" options:0 error:nil];
     NSArray *matches = [regex matchesInString:output options:0 range:NSMakeRange(0, output.length)];
     for (NSTextCheckingResult *match in matches) {
-        if (downloadInProgress++ == 0) {
-            //call UI updates??
-            [self showDownloadDialog];
-        }
         // Extract the percentage from the match
         NSString *percentage = [output substringWithRange:[match rangeAtIndex:1]];
         NSLog(@"omriku Percentage: %@%%", percentage);
@@ -237,9 +236,9 @@
             [[NSNotificationCenter defaultCenter] removeObserver:self];
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                 [self populateTableWithExistingApps];
+                //[self.downloadViewController dismissViewControllerAnimated:YES completion:nil];
+                [self.downloadAlertController dismissViewControllerAnimated:YES completion:nil];
             });
-            downloadInProgress = 0;
-
         }
     }
 
@@ -247,27 +246,73 @@
     [[notification object] waitForDataInBackgroundAndNotify];
 }
 
+
 - (void)showDownloadDialog {
-    // UIView *overlayView = [[UIView alloc] initWithFrame:self.tableView.frame];
-    // overlayView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.5];
-    // overlayView.userInteractionEnabled = NO;
-    // [newViewController.view addSubview:overlayView];
-    //this will force me to see the whole page (presetnviewcontroller)
-    [self presentViewController:self.downloadViewController animated:YES completion:nil];
-    //this will work but will let me keep pressing buttons.
-   //[self.view addSubview:self.downloadViewController.view];
-    //consider - customized alert controller? but it will disable your tabs.. not sure you want to do this.
-    // Create the progress view
-    // UIProgressView *progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-    // progressView.center = 
-    [self.downloadViewController.view addSubview:self.progressView];
+    // Create a UIAlertController with a custom view
+    self.downloadAlertController.title = @"IPARanger\nDownloading..";
+    self.downloadAlertController.message = [NSString stringWithFormat:@"Downloading requested bundle: %@\n\n", self.lastBundleDownload];
+    self.progressView.frame = CGRectMake(15, 120, 230, 5);
+    [self.downloadAlertController.view addSubview:self.progressView];
+    [self presentViewController:self.downloadAlertController animated:YES completion:nil];
+}
+
+- (void)showErrorDialog:(NSString *)errorMessage {
+    //this is where you should handle errors!
+    // Create a UIAlertController with a custom view
+    NSString *token = @"token";
+    NSString *login = @"login";
+    NSString *authentication = @"authentication";
+    NSString *cantFindApp = @"could not find app";
+
+    NSString *errorForDialog = [NSString string];
+    if ([errorMessage containsString:@"Country"] || [errorMessage containsString:@"country"]) {
+        errorForDialog = @"Mismatch Country Code.\nMake sure the country code you supplied matches the country your account is linked to";
+    } else if ([errorMessage.lowercaseString rangeOfString:token.lowercaseString].location != NSNotFound ||
+               [errorMessage.lowercaseString rangeOfString:login.lowercaseString].location != NSNotFound || 
+               [errorMessage.lowercaseString rangeOfString:authentication.lowercaseString].location != NSNotFound) {
+        errorForDialog = @"There was an issue with your token\nPlease logout and then login again with your account and try again";
+    } else if ([errorMessage.lowercaseString rangeOfString:cantFindApp.lowercaseString].location != NSNotFound)
+    {
+        errorForDialog = [NSString stringWithFormat:@"Could not find app with bundleID: %@", self.lastBundleDownload];
+    } else {
+        errorForDialog = errorMessage;
+    }
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorForDialog numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
 }
 
 - (void)updateProgressBar {
     NSLog(@"omriku updateing progress bar with.. %f", [self.currentPrecentageDownload floatValue]/100);
     [self.progressView setProgress:[self.currentPrecentageDownload floatValue]/100];
-    // if ([self.currentPrecentageDownload floatValue] == 100.0f) {
-    //     [dialog dismissViewControllerAnimated:YES completion:nil];
-    // }
+}
+
+- (void)stopScriptAndRemoveObserver {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [IPARUtils cancelScript];
 }
 @end
+
+// - (void)showDownloadDialog {
+//     // UIView *overlayView = [[UIView alloc] initWithFrame:self.tableView.frame];
+//     // overlayView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.5];
+//     // overlayView.userInteractionEnabled = NO;
+//     // [newViewController.view addSubview:overlayView];
+//     //this will force me to see the whole page (presetnviewcontroller)
+//     //this will work but will let me keep pressing buttons.
+//    //[self.view addSubview:self.downloadViewController.view];
+//     //consider - customized alert controller? but it will disable your tabs.. not sure you want to do this.
+//     // Create the progress view
+//     // UIProgressView *progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+//     // progressView.center = 
+//     UIAlertController *downloadAlert = [UIAlertController alertControllerWithTitle:@"Downloading..." message:nil preferredStyle:UIAlertControllerStyleAlert];
+//     UILabel *percentageLabel = [[UILabel alloc] initWithFrame:CGRectMake(120, 110, 40, 20)];
+//     percentageLabel.text = @"blablabla";
+//     [downloadAlert.view addSubview:percentageLabel];
+    
+//     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+//         // Handle cancel action here
+//     }];
+//     [downloadAlert addAction:cancelAction];
+//     [downloadAlert.view addSubview:self.progressView];
+
+//     [self presentViewController:downloadAlert animated:YES completion:nil];
+// }

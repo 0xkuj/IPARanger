@@ -61,9 +61,9 @@
         exit(0);
     };
     if (s == nil) {
-        [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"ipatool file was not found inside resources directory!" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"ipatool file was not found inside resources directory!" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
     } else if (![s isEqualToString:sha256verification]) {
-        [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Could not verify the integrity of files" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Could not verify the integrity of files" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
     }
     NSLog(@"omriku ipatool binary was found. all good!");
 }
@@ -79,12 +79,10 @@
             NSLog(@"omriku line error :%@", obj);
             if ([obj containsString:@"2FA"]) {
                 [self handle2FADialog];
+            } else if ([obj containsString:@"Missing value for"]) {
+                    [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
             } else {
-                if ([obj containsString:@"Missing value for"]) {
-                    [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
-                }
-                //do we actually can get error here? dont think so.. need to check.
-                //handle errors.. we are expecting to see only 2fa errors here. if not, present them!
+                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
             }
         }
     }
@@ -120,7 +118,9 @@
         for (id obj in self.linesErrorOutput) {
             NSLog(@"omriku line error :%@", obj);
             if ([obj containsString:@"An unknown error has occurred"]) {
-                [IPARUtils presentErrorWithTitle:@"Critical Error" message:@"Couldn't log you in, Something is wrong with your credentials.\nPlease try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
+                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Couldn't log you in\nSomething is wrong with your credentials.\nCheck your username and password and try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
+            } else {
+                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
             }
         }
     }
@@ -130,19 +130,19 @@
     for (id obj in self.linesStandardOutput) {
         NSLog(@"omriku line output :%@", obj);
         if ([obj containsString:@"Authenticated as"]) {
-            [self writeAuthToFile];
+            [self authToFile];
+            [self setTabNavigation];
             return YES;
         }
     }
     return NO;
 }
 
-- (void)writeAuthToFile {
-    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
-    settings[@"Authenticated"] = @YES;
-    settings[@"AccountEmail"] = self.emailTextField.text;
-    settings[@"lastLoginDate"] = [NSDate date];
-    [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
+- (void)authToFile {
+    [IPARUtils loginToFile:self.emailTextField.text];
+}
+
+- (void)setTabNavigation {
     UITabBarController *tabBarController = [[UITabBarController alloc] init];
     // Create the first view controller
     IPARSearchViewController *firstViewController = [[IPARSearchViewController alloc] init];

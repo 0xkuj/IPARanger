@@ -1,4 +1,9 @@
 #import "IPARUtils.h"
+#include <spawn.h>
+#include <signal.h>
+
+// global variable to store the pid of the spawned process
+int spawnedProcessPid;
 
 @implementation IPARUtils
 + (NSString *)sha256ForFileAtPath:(NSString *)filePath {
@@ -31,7 +36,7 @@
     return output;
 }
 
-+ (void)presentErrorWithTitle:(NSString *)title 
++ (void)presentMessageWithTitle:(NSString *)title 
                       message:(NSString *)message 
                       numberOfActions:(NSUInteger)numberOfActions 
                       buttonText:(NSString *)buttonText 
@@ -65,22 +70,45 @@
     NSPipe *errorPipe = [NSPipe pipe];
     [task setStandardError:errorPipe];
     [task setStandardOutput:outputPipe];
+    NSArray *standardOutputArray = [NSArray array];
+    NSArray *errorOutputArray = [NSArray array];
     [task launch];
-
-    NSData *outputData = [[outputPipe fileHandleForReading] readDataToEndOfFile];
-    NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
-
-    NSData *errorData = [[errorPipe fileHandleForReading] readDataToEndOfFile];
-    NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
-
+    spawnedProcessPid = task.processIdentifier;
     NSLog(@"omriku ran command with args: %@ %@",task.launchPath, [task.arguments componentsJoinedByString:@" "]);
-    NSArray *standardOutputArray = [outputString componentsSeparatedByCharactersInSet:
-                                            [NSCharacterSet newlineCharacterSet]];
-
-    NSArray *errorOutputArray = [errorOutput componentsSeparatedByCharactersInSet:
-                                            [NSCharacterSet newlineCharacterSet]];
-
+    if ([command containsString:@"download"]) {
+       [[errorPipe fileHandleForReading] waitForDataInBackgroundAndNotify];
+       [[outputPipe fileHandleForReading] waitForDataInBackgroundAndNotify];
+    } else {
+        NSData *outputData = [[outputPipe fileHandleForReading] readDataToEndOfFile];
+        NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
+        standardOutputArray = [outputString componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+        NSData *errorData = [[errorPipe fileHandleForReading] readDataToEndOfFile];
+        NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
+        errorOutputArray = [errorOutput componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    }
+    
     return @{@"standardOutput": standardOutputArray, @"errorOutput": errorOutputArray};
 }
+
++ (void)loginToFile:(NSString *)userEmail {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    settings[@"Authenticated"] = @YES;
+    settings[@"AccountEmail"] = userEmail;
+    settings[@"lastLoginDate"] = [NSDate date];
+    [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
+}
+
++ (void)logoutToFile {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    settings[@"Authenticated"] = @NO;
+    settings[@"AccountEmail"] = @"";
+    settings[@"lastLogoutDate"] = [NSDate date];
+    [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
+}
+//+ (void)cancelScript:(int)pid {
++ (void)cancelScript {
+    kill(spawnedProcessPid, SIGKILL);
+}
+
 @end
 
