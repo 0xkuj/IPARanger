@@ -159,6 +159,9 @@ int pid;
         // Retrieve the text entered in the text field
         UITextField *textField = alert.textFields.firstObject;
         self.lastBundleDownload = textField.text;
+        if (self.lastBundleDownload == nil || [self.lastBundleDownload stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
+            [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Bundle ID cannot be empty" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+        }
         //[self presentViewController:self.downloadViewController animated:YES completion:nil];
         [self showDownloadDialog];
         self.currentPrecentageDownload = 0;

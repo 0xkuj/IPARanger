@@ -83,6 +83,9 @@
         // Retrieve the text entered in the text field
         UITextField *textField = alert.textFields.firstObject;
         self.latestSearchTerm = textField.text;
+        if (self.latestSearchTerm == nil || [self.latestSearchTerm stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
+            [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"App Name cannot be empty" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+        }    
         [self runSearchCommand]; 
     }];
 
