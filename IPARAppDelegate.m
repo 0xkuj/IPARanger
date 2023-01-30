@@ -21,14 +21,14 @@
 
         // Create the first view controller
         IPARSearchViewController *firstViewController = [[IPARSearchViewController alloc] init];
-		firstViewController.title = @"IPARanger - Search";
+		firstViewController.title = @"Search";
 		firstViewController.tabBarItem.image = [UIImage systemImageNamed:@"magnifyingglass"];
 		firstViewController.tabBarItem.title = @"Search";
         // Create the navigation controller for the first view controller
         UINavigationController *firstNavigationController = [[UINavigationController alloc] initWithRootViewController:firstViewController];
         // Create the second view controller
         IPARDownloadViewController *secondViewController = [[IPARDownloadViewController alloc] init];
-		secondViewController.title = @"IPARanger - Download";
+		secondViewController.title = @"Download";
 		secondViewController.tabBarItem.image = [UIImage systemImageNamed:@"square.stack.3d.up"];
 		secondViewController.tabBarItem.title = @"Download";
         // Create the navigation controller for the second view controller

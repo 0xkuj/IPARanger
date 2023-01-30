@@ -1,5 +1,6 @@
 #import "IPARDownloadViewController.h"
 #import "IPARLoginScreenViewController.h"
+#import "IPARCountryTableViewController.h"
 #import "IPARUtils.h"
 
 @interface IPARDownloadViewController ()
@@ -11,6 +12,9 @@
 @property (nonatomic) UIAlertController *downloadAlertController;
 @property (nonatomic, strong) NSMutableArray *linesErrorOutput;
 @property (nonatomic) NSString *lastBundleDownload;
+@property (nonatomic, strong) IPARCountryTableViewController *countryTableViewController;
+@property (nonatomic) UIBarButtonItem *countryButton;
+@property (nonatomic) NSString *lastCountrySelected;
 @end
 
 int pid;
@@ -19,12 +23,12 @@ int pid;
 @implementation IPARDownloadViewController
 - (void)loadView {
     [super loadView];
-    //in case i want to add percatnage to downloaded app.. but probably we will do it in nice UI and not in shit cell. after done, reload table.
     _appsBeingDownloaded = [NSMutableArray array];
     _existingApps = [NSMutableArray array];
     _currentPrecentageDownload = [NSString string];
     _lastBundleDownload = [NSString string];
     _linesErrorOutput = [NSMutableArray array];
+    _lastCountrySelected = [NSString string];
     _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
         [self stopScriptAndRemoveObserver];
@@ -33,11 +37,28 @@ int pid;
     [self setupDownloadViewControllerStyle];
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
-    [self populateTableWithExistingApps];
-    self.navigationItem.leftBarButtonItem = self.editButtonItem;
+    _lastCountrySelected = [IPARUtils getMostUpdatedCountryFromFile] ? [IPARUtils getMostUpdatedCountryFromFile] : @"US";
+    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"CN: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
+                                                                  style:UIBarButtonItemStylePlain
+                                                                 target:self
+                                                                 action:@selector(barButtonItemTapped:)];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
+     self.navigationItem.leftBarButtonItems = @[self.editButtonItem, _countryButton];
     [self _setUpNavigationBar2];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
+    [self populateTableWithExistingApps];
+    self.countryTableViewController = [[IPARCountryTableViewController alloc] init];
+}
+
+- (void)barButtonItemTapped:(id)sender {
+    [self presentViewController:self.countryTableViewController animated:YES completion:nil];
+}
+
+- (void)updateCountry {
+    self.lastCountrySelected = [IPARUtils getMostUpdatedCountryFromFile];
+    self.countryButton.title = [NSString stringWithFormat:@"CN: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
 }
 
 // I THINK ALERT CONTROLLER WILL BE THE BEST OPTION HERE. LESS BUGS.!
@@ -72,21 +93,7 @@ int pid;
         NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", IPATOOL_SCRIPT_PATH]];
         if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
         {
-            AlertActionBlock alertBlock = ^(void) {
-                NSLog(@"omriku logout ok!");
-                IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
-                // Step 1: Pop all view controllers from the navigation stack
-                [self.navigationController popToRootViewControllerAnimated:NO];
-                // Step 2: Remove the tabbarcontroller from the window's rootViewController
-                [self.tabBarController.view removeFromSuperview];
-                // Step 3: Instantiate your login screen view controller and set it as the new rootViewController of the window
-                UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
-                UIWindow *window = UIApplication.sharedApplication.delegate.window;
-                window.rootViewController = navController;
-                [IPARUtils logoutToFile];  
-            };
-
-            [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertBlock:alertBlock presentOn:self];
+            [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertBlock:[self getAlertBlockForLogout] presentOn:self];
         }
 	}];
 
@@ -96,6 +103,22 @@ int pid;
     self.navigationItem.rightBarButtonItems = @[optionsButton, downloadButton];
 }
 
+- (AlertActionBlock)getAlertBlockForLogout {  
+    AlertActionBlock alertBlock = ^(void) {
+        NSLog(@"omriku logout ok!");
+        IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
+        // Step 1: Pop all view controllers from the navigation stack
+        [self.navigationController popToRootViewControllerAnimated:NO];
+        // Step 2: Remove the tabbarcontroller from the window's rootViewController
+        [self.tabBarController.view removeFromSuperview];
+        // Step 3: Instantiate your login screen view controller and set it as the new rootViewController of the window
+        UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
+        UIWindow *window = UIApplication.sharedApplication.delegate.window;
+        window.rootViewController = navController;
+        [IPARUtils logoutToFile];  
+    };
+    return alertBlock;
+}
 - (void)populateTableWithExistingApps {
     NSLog(@"omriku will try to read directory content.. ");
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -146,7 +169,7 @@ int pid;
                                               name:NSFileHandleDataAvailableNotification
                                               object:nil];
         
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c US", IPATOOL_SCRIPT_PATH, self.lastBundleDownload, IPARANGER_DOCUMENTS_LIBRARY];
+        NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c %@", IPATOOL_SCRIPT_PATH, self.lastBundleDownload, IPARANGER_DOCUMENTS_LIBRARY, self.lastCountrySelected];
         //here we dont deal with errors since 'download' keyword throws notification
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     }];
@@ -170,12 +193,7 @@ int pid;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    // NSLog(@"omriku counting rows.. %lu",self.searchResults.count);
-    // if (self.searchResults.count > 0) {
-    //     return self.searchResults.count;
-    // }
     return self.existingApps.count + self.appsBeingDownloaded.count;
-   //return 0;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -233,7 +251,7 @@ int pid;
         [self performSelectorOnMainThread:@selector(updateProgressBar) withObject:nil waitUntilDone:NO];
         if ([percentage containsString:@"100"]) {
             NSLog(@"omriku have 100!");
-            [[NSNotificationCenter defaultCenter] removeObserver:self];
+            [[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleDataAvailableNotification object:nil];
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                 [self populateTableWithExistingApps];
                 //[self.downloadViewController dismissViewControllerAnimated:YES completion:nil];
@@ -266,19 +284,23 @@ int pid;
 
     NSString *errorForDialog = [NSString string];
     if ([errorMessage containsString:@"Country"] || [errorMessage containsString:@"country"]) {
-        errorForDialog = @"Mismatch Country Code.\nMake sure the country code you supplied matches the country your account is linked to";
+        errorForDialog = @"Mismatch Country Code\nMake sure the country code you supplied matches the country your account is linked to";
     } else if ([errorMessage.lowercaseString rangeOfString:token.lowercaseString].location != NSNotFound ||
                [errorMessage.lowercaseString rangeOfString:login.lowercaseString].location != NSNotFound || 
                [errorMessage.lowercaseString rangeOfString:authentication.lowercaseString].location != NSNotFound) {
         errorForDialog = @"There was an issue with your token\nPlease logout and then login again with your account and try again";
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorForDialog numberOfActions:1 buttonText:@"Logout" alertBlock:[self getAlertBlockForLogout] presentOn:self];
+        return;
     } else if ([errorMessage.lowercaseString rangeOfString:cantFindApp.lowercaseString].location != NSNotFound)
     {
         errorForDialog = [NSString stringWithFormat:@"Could not find app with bundleID: %@", self.lastBundleDownload];
     } else {
         errorForDialog = errorMessage;
     }
+
     [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorForDialog numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
-}
+}        
+
 
 - (void)updateProgressBar {
     NSLog(@"omriku updateing progress bar with.. %f", [self.currentPrecentageDownload floatValue]/100);
@@ -286,7 +308,7 @@ int pid;
 }
 
 - (void)stopScriptAndRemoveObserver {
-    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleDataAvailableNotification object:nil];
     [IPARUtils cancelScript];
 }
 @end

@@ -92,6 +92,7 @@ int spawnedProcessPid;
 
 + (void)loginToFile:(NSString *)userEmail {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
     settings[@"Authenticated"] = @YES;
     settings[@"AccountEmail"] = userEmail;
     settings[@"lastLoginDate"] = [NSDate date];
@@ -100,15 +101,43 @@ int spawnedProcessPid;
 
 + (void)logoutToFile {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
     settings[@"Authenticated"] = @NO;
     settings[@"AccountEmail"] = @"";
     settings[@"lastLogoutDate"] = [NSDate date];
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
 }
+
++ (void)countryToFile:(NSString *)accountCountry {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    settings[@"AccountCountry"] = accountCountry;
+    [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
+    [[NSNotificationCenter defaultCenter] postNotificationName:kIPARCountryChangedNotification object:nil];
+}
+
++ (NSString *)getMostUpdatedCountryFromFile {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    return settings[@"AccountCountry"];
+}
+
 //+ (void)cancelScript:(int)pid {
 + (void)cancelScript {
     kill(spawnedProcessPid, SIGKILL);
 }
 
++ (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode {
+    NSAssert(countryCode.length == 2, @"Expecting ISO country code");
+
+    int base = 127462 -65;
+
+    wchar_t bytes[2] = {
+        base +[countryCode characterAtIndex:0],
+        base +[countryCode characterAtIndex:1]
+    };
+
+    return [[NSString alloc] initWithBytes:bytes length:countryCode.length *sizeof(wchar_t) encoding:NSUTF32LittleEndianStringEncoding];
+}
 @end
 

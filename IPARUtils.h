@@ -3,6 +3,7 @@
 #define IPATOOL_SCRIPT_PATH @"/Applications/IPARanger.app/ipatool/ipatool"
 #define IPARANGER_DOCUMENTS_LIBRARY @"/var/mobile/Documents/IPARanger/"
 #define IPARANGER_SETTINGS_DICT @"/var/mobile/Documents/IPARanger/com.0xkuj.iparangersettings.plist"
+#define kIPARCountryChangedNotification @"com.0xkuj.iparanger.countryChanged"
 
 @interface NSTask : NSObject
 @property (copy) NSArray * arguments; 
@@ -26,6 +27,8 @@ typedef void (^AlertActionBlock)(void);
 + (void)loginToFile:(NSString *)userEmail;
 + (void)logoutToFile;
 + (void)cancelScript;
-
++ (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode;
++ (void)countryToFile:(NSString *)accountCountry;
++ (NSString *)getMostUpdatedCountryFromFile;
 @end
 
