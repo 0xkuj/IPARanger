@@ -29,12 +29,6 @@ int pid;
     _lastBundleDownload = [NSString string];
     _linesErrorOutput = [NSMutableArray array];
     _lastCountrySelected = [NSString string];
-    _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-        [self stopScriptAndRemoveObserver];
-    }];
-    [self.downloadAlertController addAction:cancelAction];
-    [self setupDownloadViewControllerStyle];
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
     _lastCountrySelected = [IPARUtils getMostUpdatedCountryFromFile] ? [IPARUtils getMostUpdatedCountryFromFile] : @"US";
@@ -42,12 +36,17 @@ int pid;
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
                                                                  action:@selector(barButtonItemTapped:)];
-
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
+    _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        [self stopScriptAndRemoveObserver];
+    }];
+    [self.downloadAlertController addAction:cancelAction];
      self.navigationItem.leftBarButtonItems = @[self.editButtonItem, _countryButton];
-    [self _setUpNavigationBar2];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
+    [self _setUpNavigationBar2];
+    [self setupDownloadViewControllerStyle];
     [self populateTableWithExistingApps];
     self.countryTableViewController = [[IPARCountryTableViewController alloc] init];
 }
@@ -93,14 +92,23 @@ int pid;
         NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", IPATOOL_SCRIPT_PATH]];
         if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
         {
-            [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertBlock:[self getAlertBlockForLogout] presentOn:self];
+            [self logoutAction];
         }
 	}];
 
-	UIMenu* menu = [UIMenu menuWithChildren:@[accountAction, creditsAction, logoutAction]];
+    // if (@available(iOS 14, *)) {
+    //     UIBarButtonItem *logoutButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"arrow.right"] style:UIBarButtonItemStylePlain target:self action:@selector(logoutAction)];
+    //     UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"square.and.arrow.down.on.square.fill"] style:UIBarButtonItemStylePlain target:self action:@selector(addButtonTapped:)];
+    //     self.navigationItem.rightBarButtonItems = @[logoutButton, downloadButton];
+    //}
+    UIMenu* menu = [UIMenu menuWithChildren:@[accountAction, creditsAction, logoutAction]];
     UIBarButtonItem *optionsButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"ellipsis"] menu:menu];
     UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"square.and.arrow.down.on.square.fill"] style:UIBarButtonItemStylePlain target:self action:@selector(addButtonTapped:)];
     self.navigationItem.rightBarButtonItems = @[optionsButton, downloadButton];
+}
+
+- (void)logoutAction {
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertBlock:[self getAlertBlockForLogout] presentOn:self];
 }
 
 - (AlertActionBlock)getAlertBlockForLogout {  

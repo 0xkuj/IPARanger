@@ -24,35 +24,128 @@
     [self.view addSubview:_emailTextField];
     [self.view addSubview:_passwordTextField];
     [self.view addSubview:_loginButton];
+        // Create the text view
+    UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(110, 100, 180, 130)];
+    textView.text = @"";
+    textView.textColor = [UIColor whiteColor];
+    textView.font = [UIFont systemFontOfSize:35];
+    textView.backgroundColor = [UIColor clearColor];
+    textView.editable = NO;
+
+    // Animate the text
+    NSString *fullText = @"IPARanger";
+    for (int i = 0; i < fullText.length; i++) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * i * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            textView.text = [fullText substringToIndex:i+1];
+        });
+    }
+    [self.view addSubview:textView];
+
 }
 
 - (void)setLoginButtons {
     // Create email text field
-    self.emailTextField = [[UITextField alloc] initWithFrame:CGRectMake(20, 100, 280, 40)];
+    CAGradientLayer *gradientLayer = [CAGradientLayer layer];
+    gradientLayer.frame = self.view.bounds;
+    gradientLayer.colors = @[(id)[[UIColor purpleColor] CGColor], (id)[[UIColor blueColor] CGColor]];
+    [self.view.layer insertSublayer:gradientLayer atIndex:0];
+
+    self.emailTextField = [[UITextField alloc] initWithFrame:CGRectMake(40, 230, self.view.frame.size.width - 80, 45)];
+    NSDictionary *attributes = @{NSForegroundColorAttributeName : [UIColor colorWithRed:115/255.0 green:115/255.0 blue:115/255.0 alpha:1.0]};
+    
+    self.emailTextField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Apple ID Email" attributes:attributes];
+    self.emailTextField.layer.shadowColor = [UIColor blackColor].CGColor;
+    self.emailTextField.layer.shadowOffset = CGSizeMake(0.0, 2.0);
+    self.emailTextField.layer.shadowOpacity = 1;
+    self.emailTextField.layer.shadowRadius = 20;
+    self.emailTextField.layer.cornerRadius = 10;
     self.emailTextField.borderStyle = UITextBorderStyleRoundedRect;
-    self.emailTextField.placeholder = @"Email";
     self.emailTextField.autocorrectionType = UITextAutocorrectionTypeNo;
+    self.emailTextField.font = [UIFont systemFontOfSize:14];
+    self.emailTextField.autocapitalizationType = UITextAutocapitalizationTypeNone;
     self.emailTextField.keyboardType = UIKeyboardTypeEmailAddress;
     self.emailTextField.returnKeyType = UIReturnKeyDone;
     self.emailTextField.clearButtonMode = UITextFieldViewModeWhileEditing;
     self.emailTextField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    self.emailTextField.backgroundColor = [UIColor colorWithRed:0.83 green:0.83 blue:0.83 alpha:1.0];
+    self.emailTextField.textColor = [UIColor blackColor];
 
     // Create password text field
-    self.passwordTextField = [[UITextField alloc] initWithFrame:CGRectMake(20, 150, 280, 40)];
+    self.passwordTextField = [[UITextField alloc] initWithFrame:CGRectMake(40, 300, self.view.frame.size.width - 80, 40)];
+    self.passwordTextField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Apple Account Password" attributes:attributes];
+    self.passwordTextField.layer.shadowColor = [UIColor blackColor].CGColor;
+    self.passwordTextField.layer.shadowOffset = CGSizeMake(0.0, 2.0);
+    self.passwordTextField.layer.shadowOpacity = 1;
+    self.passwordTextField.layer.shadowRadius = 20;
+    self.passwordTextField.layer.cornerRadius = 10;
     self.passwordTextField.borderStyle = UITextBorderStyleRoundedRect;
-    self.passwordTextField.placeholder = @"Password";
     self.passwordTextField.autocorrectionType = UITextAutocorrectionTypeNo;
+    self.passwordTextField.font = [UIFont systemFontOfSize:14];
     self.passwordTextField.keyboardType = UIKeyboardTypeDefault;
-    self.passwordTextField.returnKeyType = UIReturnKeyDone;
+    //self.passwordTextField.returnKeyType = UIReturnKeyDone;
     self.passwordTextField.clearButtonMode = UITextFieldViewModeWhileEditing;
     self.passwordTextField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
     self.passwordTextField.secureTextEntry = YES;
+    self.passwordTextField.backgroundColor = [UIColor colorWithRed:0.83 green:0.83 blue:0.83 alpha:1.0];
+    self.passwordTextField.textColor = [UIColor blackColor];
 
     // Create login button
     self.loginButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [self.loginButton setTitle:@"Login" forState:UIControlStateNormal];
-    self.loginButton.frame = CGRectMake(20, 200, 280, 40);
+    [self.loginButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.loginButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.65 blue:0.0 alpha:1.0];
+    self.loginButton.layer.cornerRadius = 10;
+    self.loginButton.layer.shadowColor = [UIColor blackColor].CGColor;
+    self.loginButton.layer.shadowOffset = CGSizeMake(0.0, 2.0);
+    self.loginButton.layer.shadowOpacity = 1;
+    self.loginButton.layer.shadowRadius = 20;
+    self.loginButton.frame = CGRectMake(65, 420, self.view.frame.size.width - 130, 40);
     [self.loginButton addTarget:self action:@selector(handleLoginEmailPass) forControlEvents:UIControlEventTouchUpInside];
+    self.navigationController.navigationBarHidden = YES;
+    // Set the delegate of your text field
+    //self.passwordTextField.delegate = self;
+    // Add a tap gesture recognizer to dismiss the keyboard
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
+    [self.view addGestureRecognizer:tap];
+
+   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+
+}
+
+// Implement the dismissKeyboard method
+- (void)dismissKeyboard {
+    [self.view endEditing:YES];
+}
+
+- (void)keyboardWillShow:(NSNotification *)notification
+{
+    NSDictionary *userInfo = [notification userInfo];
+    CGRect keyboardFrame = [[userInfo objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue];
+
+    CGFloat keyboardHeight = keyboardFrame.size.height;
+
+    CGRect newFrame = self.view.frame;
+    newFrame.origin.y = -20;
+
+    [UIView animateWithDuration:0.3 animations:^{
+        self.view.frame = newFrame;
+    }];
+}
+
+- (void)keyboardWillHide:(NSNotification *)notification
+{
+    CGRect newFrame = self.view.frame;
+    newFrame.origin.y = 0;
+
+    [UIView animateWithDuration:0.3 animations:^{
+        self.view.frame = newFrame;
+    }];
+}
+
+- (BOOL)textFieldShouldReturn:(UITextField *)textField {
+    [textField resignFirstResponder];
+    return YES;
 }
 
 - (void)basicSanityChecks {
