@@ -11,6 +11,7 @@
 @property (nonatomic) UIButton *loginButton;
 @property (nonatomic, strong) NSMutableArray *linesStandardOutput;
 @property (nonatomic, strong) NSMutableArray *linesErrorOutput;
+@property (nonatomic) UILabel *underLabel;
 @end
 
 @implementation IPARLoginScreenViewController
@@ -39,78 +40,89 @@
             textView.text = [fullText substringToIndex:i+1];
         });
     }
+    _underLabel = [[UILabel alloc] initWithFrame:CGRectMake(85, 105, 220, 130)];
+	[_underLabel setNumberOfLines:4];
+	_underLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
+	[_underLabel setText:@"\nGUI Based Application for ipatool\n\n Created by 0xkuj"];
+	[_underLabel setBackgroundColor:[UIColor clearColor]];
+	_underLabel.textColor = [UIColor whiteColor];
+	_underLabel.textAlignment = NSTextAlignmentCenter;
+	_underLabel.alpha = 0;
+		
+    [self.view addSubview:_underLabel];
+    [NSTimer scheduledTimerWithTimeInterval:3
+                                     target:self
+                                   selector:@selector(increaseAlpha)
+                                   userInfo:nil
+                                    repeats:NO];
+
     [self.view addSubview:textView];
+
 
 }
 
+/* provides the animation */
+- (void)increaseAlpha
+{
+	[UIView animateWithDuration:0.7 animations:^{
+		self.underLabel.alpha = 1;
+	}];
+}	
+
 - (void)setLoginButtons {
-    // Create email text field
+    self.emailTextField = [self setTextFieldsViewWithFrame:CGRectMake(40, 230, self.view.frame.size.width - 80, 45) title:@"Apple ID Email"];
+    self.passwordTextField = [self setTextFieldsViewWithFrame:CGRectMake(40, 300, self.view.frame.size.width - 80, 45) title:@"Apple ID Password"];
+    self.passwordTextField.secureTextEntry = YES;
+    self.loginButton = [self setLoginButtonPrefsWithFrame:CGRectMake(65, 420, self.view.frame.size.width - 130, 40) title:@"Login"];
+    self.navigationController.navigationBarHidden = YES;
     CAGradientLayer *gradientLayer = [CAGradientLayer layer];
     gradientLayer.frame = self.view.bounds;
-    gradientLayer.colors = @[(id)[[UIColor purpleColor] CGColor], (id)[[UIColor blueColor] CGColor]];
+    UIColor *lightBlue = [UIColor colorWithRed:0.15 green:0.1 blue:0.65 alpha:1.0];
+    UIColor *lightPurple = [UIColor colorWithRed:0.5 green:0.4 blue:0.2 alpha:1.0];
+
+    gradientLayer.colors = @[(id)[lightPurple CGColor], (id)[lightBlue CGColor]];
     [self.view.layer insertSublayer:gradientLayer atIndex:0];
-
-    self.emailTextField = [[UITextField alloc] initWithFrame:CGRectMake(40, 230, self.view.frame.size.width - 80, 45)];
-    NSDictionary *attributes = @{NSForegroundColorAttributeName : [UIColor colorWithRed:115/255.0 green:115/255.0 blue:115/255.0 alpha:1.0]};
-    
-    self.emailTextField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Apple ID Email" attributes:attributes];
-    self.emailTextField.layer.shadowColor = [UIColor blackColor].CGColor;
-    self.emailTextField.layer.shadowOffset = CGSizeMake(0.0, 2.0);
-    self.emailTextField.layer.shadowOpacity = 1;
-    self.emailTextField.layer.shadowRadius = 20;
-    self.emailTextField.layer.cornerRadius = 10;
-    self.emailTextField.borderStyle = UITextBorderStyleRoundedRect;
-    self.emailTextField.autocorrectionType = UITextAutocorrectionTypeNo;
-    self.emailTextField.font = [UIFont systemFontOfSize:14];
-    self.emailTextField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    self.emailTextField.keyboardType = UIKeyboardTypeEmailAddress;
-    self.emailTextField.returnKeyType = UIReturnKeyDone;
-    self.emailTextField.clearButtonMode = UITextFieldViewModeWhileEditing;
-    self.emailTextField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
-    self.emailTextField.backgroundColor = [UIColor colorWithRed:0.83 green:0.83 blue:0.83 alpha:1.0];
-    self.emailTextField.textColor = [UIColor blackColor];
-
-    // Create password text field
-    self.passwordTextField = [[UITextField alloc] initWithFrame:CGRectMake(40, 300, self.view.frame.size.width - 80, 40)];
-    self.passwordTextField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:@"Apple Account Password" attributes:attributes];
-    self.passwordTextField.layer.shadowColor = [UIColor blackColor].CGColor;
-    self.passwordTextField.layer.shadowOffset = CGSizeMake(0.0, 2.0);
-    self.passwordTextField.layer.shadowOpacity = 1;
-    self.passwordTextField.layer.shadowRadius = 20;
-    self.passwordTextField.layer.cornerRadius = 10;
-    self.passwordTextField.borderStyle = UITextBorderStyleRoundedRect;
-    self.passwordTextField.autocorrectionType = UITextAutocorrectionTypeNo;
-    self.passwordTextField.font = [UIFont systemFontOfSize:14];
-    self.passwordTextField.keyboardType = UIKeyboardTypeDefault;
-    //self.passwordTextField.returnKeyType = UIReturnKeyDone;
-    self.passwordTextField.clearButtonMode = UITextFieldViewModeWhileEditing;
-    self.passwordTextField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
-    self.passwordTextField.secureTextEntry = YES;
-    self.passwordTextField.backgroundColor = [UIColor colorWithRed:0.83 green:0.83 blue:0.83 alpha:1.0];
-    self.passwordTextField.textColor = [UIColor blackColor];
-
-    // Create login button
-    self.loginButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [self.loginButton setTitle:@"Login" forState:UIControlStateNormal];
-    [self.loginButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    self.loginButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.65 blue:0.0 alpha:1.0];
-    self.loginButton.layer.cornerRadius = 10;
-    self.loginButton.layer.shadowColor = [UIColor blackColor].CGColor;
-    self.loginButton.layer.shadowOffset = CGSizeMake(0.0, 2.0);
-    self.loginButton.layer.shadowOpacity = 1;
-    self.loginButton.layer.shadowRadius = 20;
-    self.loginButton.frame = CGRectMake(65, 420, self.view.frame.size.width - 130, 40);
-    [self.loginButton addTarget:self action:@selector(handleLoginEmailPass) forControlEvents:UIControlEventTouchUpInside];
-    self.navigationController.navigationBarHidden = YES;
-    // Set the delegate of your text field
-    //self.passwordTextField.delegate = self;
-    // Add a tap gesture recognizer to dismiss the keyboard
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
     [self.view addGestureRecognizer:tap];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+}
 
-   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
-   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+- (UIButton *)setLoginButtonPrefsWithFrame:(CGRect)frame title:(NSString *)title {
+    UIButton* loginButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    [loginButton setTitle:@"Login" forState:UIControlStateNormal];
+    [loginButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    loginButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.65 blue:0.0 alpha:1.0];
+    loginButton.layer.cornerRadius = 10;
+    loginButton.layer.shadowColor = [UIColor blackColor].CGColor;
+    loginButton.layer.shadowOffset = CGSizeMake(0.0, 2.0);
+    loginButton.layer.shadowOpacity = 1;
+    loginButton.layer.shadowRadius = 20;
+    loginButton.frame = frame;
+    [loginButton addTarget:self action:@selector(handleLoginEmailPass) forControlEvents:UIControlEventTouchUpInside];
+    return loginButton;
+}
 
+- (UITextField *)setTextFieldsViewWithFrame:(CGRect)frame title:(NSString *)title {
+    NSDictionary *attributes = @{NSForegroundColorAttributeName : [UIColor colorWithRed:115/255.0 green:115/255.0 blue:115/255.0 alpha:1.0]};
+    UITextField *textField = [[UITextField alloc] initWithFrame:frame];
+    textField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:title attributes:attributes];
+    textField.layer.shadowColor = [UIColor blackColor].CGColor;
+    textField.layer.shadowOffset = CGSizeMake(0.0, 2.0);
+    textField.layer.shadowOpacity = 1;
+    textField.layer.shadowRadius = 20;
+    textField.layer.cornerRadius = 10;
+    textField.borderStyle = UITextBorderStyleRoundedRect;
+    textField.autocorrectionType = UITextAutocorrectionTypeNo;
+    textField.font = [UIFont systemFontOfSize:14];
+    textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    textField.keyboardType = UIKeyboardTypeEmailAddress;
+    textField.returnKeyType = UIReturnKeyDone;
+    textField.clearButtonMode = UITextFieldViewModeWhileEditing;
+    textField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    textField.backgroundColor = [UIColor colorWithRed:0.83 green:0.83 blue:0.83 alpha:1.0];
+    textField.textColor = [UIColor blackColor];
+    return textField;
 }
 
 // Implement the dismissKeyboard method
@@ -162,23 +174,41 @@
 }
 
 - (void)handleLoginEmailPass {
-    NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text];
-    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
-    self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
-    self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Logging in..."
+                                                                message:@"\n\n\n"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    spinner.center = CGPointMake(130.5, 65.5);
+    spinner.color = [UIColor whiteColor];
+    [spinner startAnimating];
+    [alert.view addSubview:spinner];
+    [self presentViewController:alert animated:YES completion:nil];
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
+        self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
+        self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
 
-    if ([self checkIfUserPassedAuthentication] == NO) {
-        for (id obj in self.linesErrorOutput) {
-            NSLog(@"omriku line error :%@", obj);
-            if ([obj containsString:@"2FA"]) {
-                [self handle2FADialog];
-            } else if ([obj containsString:@"Missing value for"]) {
-                    [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
-            } else {
-                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+        if ([self checkIfUserPassedAuthentication] == NO) {
+            for (id obj in self.linesErrorOutput) {
+                NSLog(@"omriku line error :%@", obj);
+                if ([obj containsString:@"2FA"]) {
+                    [self dismissViewControllerAnimated:YES completion:^{
+                        [self handle2FADialog];
+                    }];
+                } else if ([obj containsString:@"Missing value for"]) {
+                    [self dismissViewControllerAnimated:YES completion:^{
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                    }];
+                } else {
+                    [self dismissViewControllerAnimated:YES completion:^{
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                    }];
+                }
             }
         }
-    }
+    });
 }
 
 - (void)handle2FADialog {
@@ -202,21 +232,37 @@
 }
 
 - (void)handle2FALogic:(NSString *)twoFARes {
-    NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@%@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text, twoFARes];
-    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
-    self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
-    self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Logging in with 2FA..."
+                                                                message:@"\n\n\n"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    spinner.center = CGPointMake(130.5, 65.5);
+    spinner.color = [UIColor whiteColor];
+    [spinner startAnimating];
+    [alert.view addSubview:spinner];
+    [self presentViewController:alert animated:YES completion:nil];
 
-    if ([self checkIfUserPassedAuthentication] == NO) {
-        for (id obj in self.linesErrorOutput) {
-            NSLog(@"omriku line error :%@", obj);
-            if ([obj containsString:@"An unknown error has occurred"]) {
-                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Couldn't log you in\nSomething is wrong with your credentials.\nCheck your username and password and try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
-            } else {
-                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@%@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text, twoFARes];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
+        self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
+        self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+
+        if ([self checkIfUserPassedAuthentication] == NO) {
+            for (id obj in self.linesErrorOutput) {
+                NSLog(@"omriku line error :%@", obj);
+                if ([obj containsString:@"An unknown error has occurred"]) {
+                    [self dismissViewControllerAnimated:YES completion:^{
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Can't log you in\nCheck your Apple ID and Apple ID Password and try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
+                    }];
+                } else {
+                    [self dismissViewControllerAnimated:YES completion:^{
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                    }];
+                }
             }
         }
-    }
+    });
 }
 
 - (BOOL)checkIfUserPassedAuthentication {

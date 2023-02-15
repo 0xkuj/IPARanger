@@ -2,6 +2,7 @@
 #import "IPARDownloadViewController.h"
 #import "IPARLoginScreenViewController.h"
 #import "IPARUtils.h"
+#import "IPARAppCell.h"
 
 @interface IPARSearchViewController ()
 @property (nonatomic) UIButton *searchButton;
@@ -15,6 +16,12 @@
 
 - (void)loadView {
     [super loadView];
+    self.tableView.backgroundColor = [UIColor clearColor];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    self.tableView.rowHeight = 80;
+    self.tableView.estimatedRowHeight = 100;
+
     _searchResults = [NSMutableArray array];
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
@@ -161,10 +168,87 @@
     [self.searchResults removeAllObjects];           
     for (id obj in self.linesStandardOutput) {
         NSLog(@"omriku line output :%@", obj);
-        [self.searchResults addObject:obj];
+        if (![obj containsString:@"==>"]) {
+            [self.searchResults addObject:obj];
+        } 
     }
+
+    [self parseSearchResults];
     [self.tableView reloadData];
 }
+
+- (void)parseSearchResults {
+    NSArray *parsedAppBundle = [NSArray array];
+    NSArray *parsedAppName = [NSArray array];
+    NSArray *parsedAppVersion = [NSArray array];
+    parsedAppBundle = [self stambundle:self.searchResults];
+    parsedAppName = [self stamapps:self.searchResults];
+    parsedAppVersion = [self stamversion:self.searchResults];
+
+    for (int i=0; i<[[self.searchResults copy] count]; i++) {
+        if (i < [parsedAppName count] && i < [parsedAppVersion count] && i < [parsedAppBundle count]) {
+            NSMutableDictionary *dictForApp = [NSMutableDictionary dictionary];
+            dictForApp[@"appName"] = parsedAppName[i];
+            dictForApp[@"appBundle"] = parsedAppBundle[i];
+            dictForApp[@"appVersion"] = parsedAppVersion[i];
+            self.searchResults[i] = dictForApp;
+        }
+    }
+}
+
+//bundle - works well! need to see if that is hitting performace. dont really care for 1-2 more seconds!
+- (NSArray *)stambundle:(NSArray *)strings {
+    NSError *error = nil;
+    NSMutableArray *retval = [NSMutableArray array];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@":\\s*(\\S+)\\s*\\(" options:0 error:&error];
+
+    for (NSString *string in strings) {
+        NSTextCheckingResult *match = [regex firstMatchInString:string options:0 range:NSMakeRange(0, string.length)];
+        if (match) {
+            NSRange range = [match rangeAtIndex:1];
+            [retval addObject:[string substringWithRange:range]];
+            //NSString *bundleIdentifier = [string substringWithRange:range];
+            //NSLog(@"omriku bundle: %@", bundleIdentifier);
+        }
+    }
+    return retval;
+}
+
+//appname - works well! need to see if that is hitting performace. dont really care for 1-2 more seconds!
+- (NSArray *)stamapps:(NSArray *)strings {
+    NSError *error = nil;
+    NSMutableArray *retval = [NSMutableArray array];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\d+\\.\\s*([^:-]+)" options:0 error:&error];
+
+    for (NSString *string in strings) {
+        NSTextCheckingResult *match = [regex firstMatchInString:string options:0 range:NSMakeRange(0, string.length)];
+        if (match) {
+            NSRange range = [match rangeAtIndex:1];
+            [retval addObject:[string substringWithRange:range]];
+            //NSString *bundleIdentifier = [string substringWithRange:range];
+            //NSLog(@"omriku appname: %@", bundleIdentifier);
+        }
+    }
+    return retval;
+}
+
+- (NSArray *)stamversion:(NSArray *)strings {
+    NSString *pattern = @"\\((.*?)\\)[^\\(]*$";
+    NSMutableArray *retval = [NSMutableArray array];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
+
+    for (NSString *string in strings) {
+        NSRange range = [regex rangeOfFirstMatchInString:string options:NSMatchingReportCompletion range:NSMakeRange(0, [string length])];
+        if (range.location != NSNotFound) {
+            NSString *version = [string substringWithRange:range];
+            //remove parenthesis..
+            [retval addObject:[version substringWithRange:NSMakeRange(1, [version length] - 3)]];
+            //NSLog(@"omriku Version for %@ is %@", string, [version substringWithRange:NSMakeRange(1, [version length] - 3)]);
+        }
+    }
+    return retval;
+}
+
 
 #pragma mark - Table View Data Source
 
@@ -181,13 +265,28 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-	static NSString *CellIdentifier = @"Cell";
-	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
-	if (!cell) {
-		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
-	}
+    IPARAppCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell"];
+    
+    if (cell == nil) {
+        cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Cell"];
+    }
 
-    cell.textLabel.text = self.searchResults[indexPath.row];
+	// static NSString *CellIdentifier = @"Cell";
+	// UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+	// if (!cell) {
+	// 	cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+	// }
+    // cell.textLabel.text = self.searchResults[indexPath.row];
+
+    UIView *selectionView = [UIView new];
+    selectionView.backgroundColor = UIColor.clearColor;
+    [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
+    cell.backgroundColor = UIColor.clearColor;
+    if (self.searchResults[indexPath.row] != nil) {
+        cell.appName.text = self.searchResults[indexPath.row][@"appName"];
+        cell.appBundle.text = self.searchResults[indexPath.row][@"appBundle"];
+        cell.appVersion.text = self.searchResults[indexPath.row][@"appVersion"];
+    }
 	return cell;
 }
 
@@ -203,19 +302,57 @@
 }
 @end
 
-//regex and stuff..
-/*
-NSString *string = @"77. Dots: A Game About Connecting: com.nerdyoctopus.dots (2.4.7).";
+// - (NSString *)getParsedAppNameString:(NSString *)stringToParse {
+//     NSString *pattern = @"\\d+\\.(.*?):";
+//     NSError *error = nil;
+//     NSString *appName = [NSString string];
+//     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
+//     if (error) {
+//         NSLog(@"Error creating regex: %@", error);
+//     } else {
+//         NSTextCheckingResult *result = [regex firstMatchInString:stringToParse options:0 range:NSMakeRange(0, [stringToParse length])];
+//         if (result) {
+//             return [stringToParse substringWithRange:[result rangeAtIndex:1]];
+//             //NSLog(@"Word between dot and colon: %@", wordBetweenDotAndColon);
+//         } else {
+//             NSLog(@"No match found");
+//         }
+//     }
+//     return @"aaa";
+// }
 
-// Use regular expressions to extract the bundle identifier
-NSRegularExpression *bundleIdRegex = [NSRegularExpression regularExpressionWithPattern:@"(?<=:\\s)[a-zA-Z0-9.]+(?=\\s\\()" options:0 error:NULL];
-NSTextCheckingResult *bundleIdMatch = [bundleIdRegex firstMatchInString:string options:0 range:NSMakeRange(0, string.length)];
-NSString *bundleId = [string substringWithRange:bundleIdMatch.range];
+// - (NSString *)getParsedVersionString:(NSString *)stringToParse {
+//     NSString *pattern = @"\\((.*?)\\)";
+//     NSError *error = nil;
+//     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
+//     if (error) {
+//         NSLog(@"Error creating regex: %@", error);
+//     } else {
+//         NSTextCheckingResult *result = [regex firstMatchInString:stringToParse options:0 range:NSMakeRange(0, [stringToParse length])];
+//         if (result) {
+//             return [stringToParse substringWithRange:[result rangeAtIndex:1]];
+//             //NSLog(@"String inside parentheses: %@", stringInsideParentheses);
+//         } else {
+//             NSLog(@"No match found");
+//         }
+//     }
+//     return @"aaa";
+// }
 
-// Use regular expressions to remove the number at the beginning of the string
-NSRegularExpression *numberRegex = [NSRegularExpression regularExpressionWithPattern:@"^[0-9.]+(?=\\s)" options:0 error:NULL];
-NSString *cleanString = [numberRegex stringByReplacingMatchesInString:string options:0 range:NSMakeRange(0, string.length) withTemplate:@""];
-
-NSLog(@"Bundle Identifier: %@", bundleId);
-NSLog(@"Clean String: %@", cleanString);
-*/
+// - (NSString *)getParsedBundleString:(NSString *)stringToParse {
+//     NSString *pattern = @":\\s*(.*?)\\s*\\(";
+//     NSError *error = nil;
+//     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
+//     if (error) {
+//         NSLog(@"Error creating regex: %@", error);
+//     } else {
+//         NSTextCheckingResult *result = [regex firstMatchInString:stringToParse options:0 range:NSMakeRange(0, [stringToParse length])];
+//         if (result) {
+//             return [stringToParse substringWithRange:[result rangeAtIndex:1]];
+//             //NSLog(@"Bundle identifier: %@", bundleIdentifier);
+//         } else {
+//             NSLog(@"No match found");
+//         }
+//     }
+//     return @"aaa";
+// }
