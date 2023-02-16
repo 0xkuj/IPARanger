@@ -14,6 +14,7 @@
 
 @implementation IPARSearchViewController
 
+//annoying shit - does not scroll between cells. check for solution!
 - (void)loadView {
     [super loadView];
     self.tableView.backgroundColor = [UIColor clearColor];
@@ -27,7 +28,7 @@
     _linesErrorOutput = [NSMutableArray array];
     _latestSearchTerm = [NSString string];
     //self.title = @"IPA Ranger - Search";
-    self.navigationItem.leftBarButtonItem = self.editButtonItem;
+    //self.navigationItem.leftBarButtonItem = self.editButtonItem;
     [self _setUpNavigationBar];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
@@ -123,14 +124,19 @@
 
 - (void)runSearchCommand {
     // Create and display a loading animation
-    UIActivityIndicatorView *loadingIndicator = [[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    loadingIndicator.center = self.view.center;
-    [self.view addSubview:loadingIndicator];
-    [loadingIndicator startAnimating];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"Searching for '%@' in the Appstore", self.latestSearchTerm]
+                                                                message:@"\n\n\n"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    spinner.center = CGPointMake(130.5, 95);
+    spinner.color = [UIColor whiteColor];
+    [spinner startAnimating];
+    [alert.view addSubview:spinner];
+    [self presentViewController:alert animated:YES completion:nil];
 
     // Dispatch the command to a background queue
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:@"/Applications/IPARanger.app/ipatool/ipatool search %@ --limit 100", self.latestSearchTerm];
+        NSString *commandToExecute = [NSString stringWithFormat:@"/Applications/IPARanger.app/ipatool/ipatool search '%@' --limit 20", self.latestSearchTerm];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
         self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
@@ -138,12 +144,10 @@
         // Once the command is finished, update the UI on the main queue
         dispatch_async(dispatch_get_main_queue(), ^{
             // Remove the loading animation
-            [loadingIndicator stopAnimating];
-            [loadingIndicator removeFromSuperview];
+            [self dismissViewControllerAnimated:YES completion:nil];
             if ([self isErrorExists] == NO) {
                 [self populateTableWithSearchResults];
             }
-             // Update the UI with the results of the command
         });
     });
 }
@@ -166,9 +170,9 @@
 //try to think of a better algo to show search phrases..
 - (void)populateTableWithSearchResults {
     [self.searchResults removeAllObjects];           
-    for (id obj in self.linesStandardOutput) {
+    for (NSString *obj in self.linesStandardOutput) {
         NSLog(@"omriku line output :%@", obj);
-        if (![obj containsString:@"==>"]) {
+        if (![obj containsString:@"==>"] && obj.length > 0 && [obj.lowercaseString containsString:self.latestSearchTerm]) {
             [self.searchResults addObject:obj];
         } 
     }
@@ -191,11 +195,34 @@
             dictForApp[@"appName"] = parsedAppName[i];
             dictForApp[@"appBundle"] = parsedAppBundle[i];
             dictForApp[@"appVersion"] = parsedAppVersion[i];
+            dictForApp[@"appImage"] = [self getAppIconFromApple:parsedAppBundle[i]];
             self.searchResults[i] = dictForApp;
         }
     }
 }
 
+- (UIImage *)getAppIconFromApple:(NSString *)bundleId {
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/lookup?bundleId=%@", bundleId]];
+    NSData *data = [NSData dataWithContentsOfURL:url];
+
+    if (data) {
+        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
+        NSArray *results = json[@"results"];
+        
+        if (results.count > 0) {
+            NSDictionary *appInfo = results[0];
+            NSString *iconUrlString = appInfo[@"artworkUrl100"];
+            NSURL *iconUrl = [NSURL URLWithString:iconUrlString];
+            NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
+            UIImage *iconImage = [UIImage imageWithData:iconData];
+            NSLog(@"omriku returning image: %@ for bundle: %@", iconImage, bundleId);
+            return iconImage;
+            // Use the icon image in your list
+        }
+    }
+    NSLog(@"omriku returns nil FOR BUNDLE: %@", bundleId);
+    return nil;
+}
 //bundle - works well! need to see if that is hitting performace. dont really care for 1-2 more seconds!
 - (NSArray *)stambundle:(NSArray *)strings {
     NSError *error = nil;
@@ -282,11 +309,11 @@
     selectionView.backgroundColor = UIColor.clearColor;
     [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
     cell.backgroundColor = UIColor.clearColor;
-    if (self.searchResults[indexPath.row] != nil) {
-        cell.appName.text = self.searchResults[indexPath.row][@"appName"];
-        cell.appBundle.text = self.searchResults[indexPath.row][@"appBundle"];
-        cell.appVersion.text = self.searchResults[indexPath.row][@"appVersion"];
-    }
+    //still crashing.. need to figure out why!
+    cell.appName.text = self.searchResults[indexPath.row][@"appName"];
+    cell.appBundle.text = self.searchResults[indexPath.row][@"appBundle"];
+    cell.appVersion.text = self.searchResults[indexPath.row][@"appVersion"];
+    cell.appImage.image = self.searchResults[indexPath.row][@"appImage"];
 	return cell;
 }
 
@@ -298,7 +325,13 @@
 #pragma mark - Table View Delegate
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-	[tableView deselectRowAtIndexPath:indexPath animated:YES];
+	//[tableView deselectRowAtIndexPath:indexPath animated:YES];
+    AlertActionBlock alertBlock = ^(void) {
+        UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+        pasteboard.string = self.searchResults[indexPath.row][@"appBundle"];
+    };
+
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nCopy Bundle" message:[NSString stringWithFormat:@"App selected: %@\n\nBundle ID: %@",self.searchResults[indexPath.row][@"appName"], self.searchResults[indexPath.row][@"appBundle"]] numberOfActions:2 buttonText:@"Copy Bundle" alertBlock:alertBlock presentOn:self];
 }
 @end
 

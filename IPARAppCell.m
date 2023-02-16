@@ -9,20 +9,21 @@
     if (self) {
         self.baseView = [[UIView alloc] init];
         self.baseView.backgroundColor = UIColor.secondarySystemBackgroundColor;
-        self.baseView.clipsToBounds = true;
+        self.baseView.clipsToBounds = YES;
         self.baseView.layer.cornerRadius = 12;
         self.baseView.layer.cornerCurve = kCACornerCurveContinuous;
         [self addSubview:self.baseView];
-        [self.baseView top:self.topAnchor padding:5];
+        [self.baseView top:self.topAnchor padding:12];
         [self.baseView leading:self.leadingAnchor padding:20];
         [self.baseView trailing:self.trailingAnchor padding:-20];
         [self.baseView bottom:self.bottomAnchor padding:-5];
         
         self.appImage = [[UIImageView alloc] init];
-        self.appImage.clipsToBounds = true;
         self.appImage.contentMode = UIViewContentModeScaleAspectFill;
+        self.appImage.layer.cornerRadius = 20;
+        self.appImage.clipsToBounds = YES;
         [self.baseView addSubview:self.appImage];
-        [self.appImage size:CGSizeMake(70, 70)];
+        [self.appImage size:CGSizeMake(40, 40)];
         [self.appImage y:self.baseView.centerYAnchor padding:0];
         [self.appImage leading:self.baseView.leadingAnchor padding:10];
         
@@ -45,7 +46,7 @@
         self.appName.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appName];
         
-        [self.appName top:self.appImage.topAnchor padding:-3];
+        [self.appName top:self.appImage.topAnchor padding:-6.5];
         [self.appName leading:self.appImage.trailingAnchor padding:15];
         //[self.appName trailing:self.timeLabel.leadingAnchor padding:-10];
         
@@ -56,7 +57,7 @@
         self.appBundle.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appBundle];
         
-        [self.appBundle top:self.appName.bottomAnchor padding:2];
+        [self.appBundle top:self.appName.bottomAnchor padding:1];
         [self.appBundle leading:self.appImage.trailingAnchor padding:15];
         // [self.appBundle trailing:self.timeLabel.leadingAnchor padding:-10];
         
@@ -67,7 +68,7 @@
         self.appVersion.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appVersion];
         
-        [self.appVersion top:self.appBundle.bottomAnchor padding:2];
+        [self.appVersion top:self.appBundle.bottomAnchor padding:0];
         [self.appVersion leading:self.appImage.trailingAnchor padding:15];
         // [self.appVersion trailing:self.timeLabel.leadingAnchor padding:-10];      
     }
