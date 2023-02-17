@@ -6,9 +6,19 @@
 @property (nonatomic) UISearchController *searchController;
 @property (nonatomic) NSArray *filteredCountries;
 @property (nonatomic) NSMutableDictionary* codesKeysEmojisValues;
+@property (nonatomic) NSString* viewControllerCaller;
 @end
 
 @implementation IPARCountryTableViewController
+- (instancetype)initWithCaller:(NSString *)caller {
+    self = [super init];
+    if (self) {
+        _viewControllerCaller = [NSString string];
+        _viewControllerCaller = caller;
+    }
+    return self;
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
@@ -82,7 +92,12 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
      NSString *countryCode = [self localeForFullCountryName:self.filteredCountries[indexPath.row]];
-     [IPARUtils countryToFile:countryCode];
+     if ([self.viewControllerCaller isEqualToString:@"Downloader"]) {
+        [IPARUtils downloadCountryToFile:countryCode];
+     } else if ([self.viewControllerCaller isEqualToString:@"Search"]) {
+        [IPARUtils searchCountryToFile:countryCode];
+     }
+    
      self.searchController.searchBar.text = nil;
      //wtf is this shit? one is releasing the search the other the table?!?!
 	 [self dismissViewControllerAnimated:YES completion:nil];

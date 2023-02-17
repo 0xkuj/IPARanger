@@ -1,37 +1,74 @@
 #import "IPARSearchViewController.h"
 #import "IPARDownloadViewController.h"
 #import "IPARLoginScreenViewController.h"
+#import "IPARCountryTableViewController.h"
 #import "IPARUtils.h"
 #import "IPARAppCell.h"
 
+#define APPS_SEARCH_INITIAL_LIMIT 12
+
 @interface IPARSearchViewController ()
 @property (nonatomic) UIButton *searchButton;
-@property (nonatomic, strong) NSMutableArray *searchResults;
-@property (nonatomic, strong) NSMutableArray *linesStandardOutput;
-@property (nonatomic, strong) NSMutableArray *linesErrorOutput;
+@property (nonatomic) NSMutableArray *searchResults;
+@property (nonatomic) NSMutableArray *linesStandardOutput;
+@property (nonatomic) NSMutableArray *linesErrorOutput;
+@property (nonatomic) UILabel *noDataLabel;
 @property (nonatomic) NSString *latestSearchTerm;
+@property (nonatomic) NSInteger limitSearch;
+@property (nonatomic, strong) IPARCountryTableViewController *countryTableViewController;
+@property (nonatomic) UIBarButtonItem *countryButton;
+@property (nonatomic) NSString *lastCountrySelected;
 @end
 
 @implementation IPARSearchViewController
 
-//annoying shit - does not scroll between cells. check for solution!
+//figure out best solution for countries. maybe in the menu, maybe in settings of account. its ugly af
 - (void)loadView {
     [super loadView];
+    
     self.tableView.backgroundColor = [UIColor clearColor];
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
     self.tableView.rowHeight = 80;
     self.tableView.estimatedRowHeight = 100;
+    // Create a label with the text you want to display
+    _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
+    _noDataLabel.numberOfLines = 2;
+    _limitSearch = APPS_SEARCH_INITIAL_LIMIT;
+    _noDataLabel.textColor = [UIColor grayColor];
+    _noDataLabel.textAlignment = NSTextAlignmentCenter;
+
+    // Set the label as the background view of the table view
+    self.tableView.backgroundView = _noDataLabel;
 
     _searchResults = [NSMutableArray array];
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
     _latestSearchTerm = [NSString string];
-    //self.title = @"IPA Ranger - Search";
-    //self.navigationItem.leftBarButtonItem = self.editButtonItem;
+    self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Search"];
+    _lastCountrySelected = [NSString string];
+    _lastCountrySelected = [IPARUtils getMostUpdatedSearchCountryFromFile] ? [IPARUtils getMostUpdatedSearchCountryFromFile] : @"US";
+    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Search Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
+                                                                  style:UIBarButtonItemStylePlain
+                                                                 target:self
+                                                                 action:@selector(countryButtonItemTapped:)];
+    NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
+    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                     
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
+    self.navigationItem.leftBarButtonItem = _countryButton;
     [self _setUpNavigationBar];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
+    
+}
+
+- (void)countryButtonItemTapped:(id)sender {
+    [self presentViewController:self.countryTableViewController animated:YES completion:nil];
+}
+
+- (void)updateCountry {
+    self.lastCountrySelected = [IPARUtils getMostUpdatedSearchCountryFromFile];
+    self.countryButton.title = [NSString stringWithFormat:@"Search Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]];
 }
 
 - (void)_setUpNavigationBar
@@ -103,9 +140,14 @@
     UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"Search" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         // Retrieve the text entered in the text field
         UITextField *textField = alert.textFields.firstObject;
-        self.latestSearchTerm = textField.text;
+        if ([textField.text isEqualToString:self.latestSearchTerm] == NO) {
+            self.latestSearchTerm = textField.text;
+            self.limitSearch = APPS_SEARCH_INITIAL_LIMIT;
+        }
+        
         if (self.latestSearchTerm == nil || [self.latestSearchTerm stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
             [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"App Name cannot be empty" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+            return;
         }    
         [self runSearchCommand]; 
     }];
@@ -124,11 +166,19 @@
 
 - (void)runSearchCommand {
     // Create and display a loading animation
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"Searching for '%@' in the Appstore", self.latestSearchTerm]
-                                                                message:@"\n\n\n"
+    UIAlertController *alert;
+    if (self.limitSearch > APPS_SEARCH_INITIAL_LIMIT) {
+        alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"Fetching more results for '%@' from the Appstore", self.latestSearchTerm]
+                                                                message:@"\n\n\n\n"
                                                             preferredStyle:UIAlertControllerStyleAlert];
+    } else {
+        alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"Searching for '%@' in the Appstore", self.latestSearchTerm]
+                                                                message:[NSString stringWithFormat:@"Country Selected: %@\n\n\n\n", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    }
+
     UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    spinner.center = CGPointMake(130.5, 95);
+    spinner.center = CGPointMake(130.5, 125);
     spinner.color = [UIColor whiteColor];
     [spinner startAnimating];
     [alert.view addSubview:spinner];
@@ -136,18 +186,19 @@
 
     // Dispatch the command to a background queue
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:@"/Applications/IPARanger.app/ipatool/ipatool search '%@' --limit 20", self.latestSearchTerm];
+        NSString *commandToExecute = [NSString stringWithFormat:@"/Applications/IPARanger.app/ipatool/ipatool search '%@' --limit %ld -c %@", self.latestSearchTerm, self.limitSearch, self.lastCountrySelected];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
         self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+    
+        // Remove the loading animation
         
-        // Once the command is finished, update the UI on the main queue
         dispatch_async(dispatch_get_main_queue(), ^{
-            // Remove the loading animation
-            [self dismissViewControllerAnimated:YES completion:nil];
             if ([self isErrorExists] == NO) {
+            // Once the command is finished, update the UI on the main queue
                 [self populateTableWithSearchResults];
-            }
+            
+        }
         });
     });
 }
@@ -161,10 +212,13 @@
             } else {
                 errorToShow = obj;
             }
-            [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorToShow numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+            [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorToShow numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+            }];
             return YES;
         } 
     }
+    [self dismissViewControllerAnimated:YES completion:nil];
     return NO;
 }
 //try to think of a better algo to show search phrases..
@@ -172,7 +226,7 @@
     [self.searchResults removeAllObjects];           
     for (NSString *obj in self.linesStandardOutput) {
         NSLog(@"omriku line output :%@", obj);
-        if (![obj containsString:@"==>"] && obj.length > 0 && [obj.lowercaseString containsString:self.latestSearchTerm]) {
+        if (![obj containsString:@"==>"] && obj.length > 0 /*&& [obj.lowercaseString containsString:self.latestSearchTerm]*/) {
             [self.searchResults addObject:obj];
         } 
     }
@@ -286,17 +340,17 @@
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
     NSLog(@"omriku counting rows.. %lu",self.searchResults.count);
     if (self.searchResults.count > 0) {
-        return self.searchResults.count;
+        //fixing scrolling issue!!
+        self.noDataLabel.text = @" \n  ";
+        //adding one for show more button
+        return self.searchResults.count+1;
     }
+    self.noDataLabel.text = @"Nothing to show here.\nStart by clicking the search icon!";
     return 0;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    IPARAppCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell"];
-    
-    if (cell == nil) {
-        cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"Cell"];
-    }
+
 
 	// static NSString *CellIdentifier = @"Cell";
 	// UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -304,88 +358,54 @@
 	// 	cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
 	// }
     // cell.textLabel.text = self.searchResults[indexPath.row];
+    NSLog(@"omriku cell: %lu", indexPath.row);
+    if (indexPath.row < [self.searchResults count]) {
+        IPARAppCell *cell = [tableView dequeueReusableCellWithIdentifier:@"IPARAppCell"];
+        
+        if (cell == nil) {
+            cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"IPARAppCell"];
+        }
+        UIView *selectionView = [UIView new];
+        selectionView.backgroundColor = UIColor.clearColor;
+        [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
+        cell.backgroundColor = UIColor.clearColor;
+        //still crashing.. need to figure out why!
+        cell.appName.text = self.searchResults[indexPath.row][@"appName"];
+        cell.appBundle.text = self.searchResults[indexPath.row][@"appBundle"];
+        cell.appVersion.text = self.searchResults[indexPath.row][@"appVersion"];
+        cell.appImage.image = self.searchResults[indexPath.row][@"appImage"];
+        return cell;
+    } else {
+        static NSString *CellIdentifier = @"Cell";
+	    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+	    if (!cell) {
+		    cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+	    }
 
-    UIView *selectionView = [UIView new];
-    selectionView.backgroundColor = UIColor.clearColor;
-    [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
-    cell.backgroundColor = UIColor.clearColor;
-    //still crashing.. need to figure out why!
-    cell.appName.text = self.searchResults[indexPath.row][@"appName"];
-    cell.appBundle.text = self.searchResults[indexPath.row][@"appBundle"];
-    cell.appVersion.text = self.searchResults[indexPath.row][@"appVersion"];
-    cell.appImage.image = self.searchResults[indexPath.row][@"appImage"];
-	return cell;
-}
-
-- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
-	[self.searchResults removeObjectAtIndex:indexPath.row];
-	[tableView deleteRowsAtIndexPaths:@[ indexPath ] withRowAnimation:UITableViewRowAnimationAutomatic];
+       cell.textLabel.textColor = [UIColor colorWithRed:0/255.0 green:122/255.0 blue:255/255.0 alpha:1.0];
+       cell.textLabel.text = @"Show More Results";
+        // Set Auto Layout constraints to center the text label in the cell
+       cell.textLabel.translatesAutoresizingMaskIntoConstraints = NO;
+       [cell.contentView addConstraint:[NSLayoutConstraint constraintWithItem:cell.textLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:cell.contentView attribute:NSLayoutAttributeCenterY multiplier:1.0 constant:0.0]];
+       [cell.contentView addConstraint:[NSLayoutConstraint constraintWithItem:cell.textLabel attribute:NSLayoutAttributeCenterX relatedBy:NSLayoutRelationEqual toItem:cell.contentView attribute:NSLayoutAttributeCenterX multiplier:1.0 constant:0.0]];
+        return cell;
+    }
 }
 
 #pragma mark - Table View Delegate
-
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
 	//[tableView deselectRowAtIndexPath:indexPath animated:YES];
-    AlertActionBlock alertBlock = ^(void) {
-        UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-        pasteboard.string = self.searchResults[indexPath.row][@"appBundle"];
-    };
+    if (indexPath.row < [self.searchResults count]) {
+        AlertActionBlock alertBlock = ^(void) {
+            UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
+            pasteboard.string = self.searchResults[indexPath.row][@"appBundle"];
+        };
 
-    [IPARUtils presentMessageWithTitle:@"IPARanger\nCopy Bundle" message:[NSString stringWithFormat:@"App selected: %@\n\nBundle ID: %@",self.searchResults[indexPath.row][@"appName"], self.searchResults[indexPath.row][@"appBundle"]] numberOfActions:2 buttonText:@"Copy Bundle" alertBlock:alertBlock presentOn:self];
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nCopy Bundle" message:[NSString stringWithFormat:@"App selected: %@\n\nBundle ID: %@",self.searchResults[indexPath.row][@"appName"], self.searchResults[indexPath.row][@"appBundle"]] numberOfActions:2 buttonText:@"Copy Bundle" alertBlock:alertBlock presentOn:self];
+    } else {
+        self.limitSearch += APPS_SEARCH_INITIAL_LIMIT;
+        [self runSearchCommand];
+        NSLog(@"omriku show more!");
+    }
 }
 @end
-
-// - (NSString *)getParsedAppNameString:(NSString *)stringToParse {
-//     NSString *pattern = @"\\d+\\.(.*?):";
-//     NSError *error = nil;
-//     NSString *appName = [NSString string];
-//     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
-//     if (error) {
-//         NSLog(@"Error creating regex: %@", error);
-//     } else {
-//         NSTextCheckingResult *result = [regex firstMatchInString:stringToParse options:0 range:NSMakeRange(0, [stringToParse length])];
-//         if (result) {
-//             return [stringToParse substringWithRange:[result rangeAtIndex:1]];
-//             //NSLog(@"Word between dot and colon: %@", wordBetweenDotAndColon);
-//         } else {
-//             NSLog(@"No match found");
-//         }
-//     }
-//     return @"aaa";
-// }
-
-// - (NSString *)getParsedVersionString:(NSString *)stringToParse {
-//     NSString *pattern = @"\\((.*?)\\)";
-//     NSError *error = nil;
-//     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
-//     if (error) {
-//         NSLog(@"Error creating regex: %@", error);
-//     } else {
-//         NSTextCheckingResult *result = [regex firstMatchInString:stringToParse options:0 range:NSMakeRange(0, [stringToParse length])];
-//         if (result) {
-//             return [stringToParse substringWithRange:[result rangeAtIndex:1]];
-//             //NSLog(@"String inside parentheses: %@", stringInsideParentheses);
-//         } else {
-//             NSLog(@"No match found");
-//         }
-//     }
-//     return @"aaa";
-// }
-
-// - (NSString *)getParsedBundleString:(NSString *)stringToParse {
-//     NSString *pattern = @":\\s*(.*?)\\s*\\(";
-//     NSError *error = nil;
-//     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:&error];
-//     if (error) {
-//         NSLog(@"Error creating regex: %@", error);
-//     } else {
-//         NSTextCheckingResult *result = [regex firstMatchInString:stringToParse options:0 range:NSMakeRange(0, [stringToParse length])];
-//         if (result) {
-//             return [stringToParse substringWithRange:[result rangeAtIndex:1]];
-//             //NSLog(@"Bundle identifier: %@", bundleIdentifier);
-//         } else {
-//             NSLog(@"No match found");
-//         }
-//     }
-//     return @"aaa";
-// }

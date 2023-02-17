@@ -28,7 +28,9 @@ typedef void (^AlertActionBlock)(void);
 + (void)logoutToFile;
 + (void)cancelScript;
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode;
-+ (void)countryToFile:(NSString *)accountCountry;
-+ (NSString *)getMostUpdatedCountryFromFile;
++ (void)downloadCountryToFile:(NSString *)accountCountry;
++ (NSString *)getMostUpdatedDownloadCountryFromFile;
++ (void)searchCountryToFile:(NSString *)accountCountry;
++ (NSString *)getMostUpdatedSearchCountryFromFile;
 @end
 

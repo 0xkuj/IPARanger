@@ -108,18 +108,32 @@ int spawnedProcessPid;
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
 }
 
-+ (void)countryToFile:(NSString *)accountCountry {
++ (void)downloadCountryToFile:(NSString *)accountCountry {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
-    settings[@"AccountCountry"] = accountCountry;
+    settings[@"AccountCountryDownload"] = accountCountry;
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
     [[NSNotificationCenter defaultCenter] postNotificationName:kIPARCountryChangedNotification object:nil];
 }
 
-+ (NSString *)getMostUpdatedCountryFromFile {
++ (NSString *)getMostUpdatedDownloadCountryFromFile {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
-    return settings[@"AccountCountry"];
+    return settings[@"AccountCountryDownload"];
+}
+
++ (void)searchCountryToFile:(NSString *)accountCountry {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    settings[@"AccountCountrySearch"] = accountCountry;
+    [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
+    [[NSNotificationCenter defaultCenter] postNotificationName:kIPARCountryChangedNotification object:nil];
+}
+
++ (NSString *)getMostUpdatedSearchCountryFromFile {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    return settings[@"AccountCountrySearch"];
 }
 
 //+ (void)cancelScript:(int)pid {

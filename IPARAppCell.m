@@ -27,19 +27,6 @@
         [self.appImage y:self.baseView.centerYAnchor padding:0];
         [self.appImage leading:self.baseView.leadingAnchor padding:10];
         
-        // self.timeLabel = [[UILabel alloc] init];
-        // self.timeLabel.textAlignment = NSTextAlignmentCenter;
-        // self.timeLabel.font = [UIFont systemFontOfSize:12];
-        // self.timeLabel.backgroundColor = [UIColor.systemOrangeColor colorWithAlphaComponent:0.4];
-        // self.timeLabel.textColor = UIColor.orangeColor;
-        // self.timeLabel.layer.cornerRadius = 5;
-        // self.timeLabel.layer.cornerCurve = kCACornerCurveContinuous;
-        // self.timeLabel.clipsToBounds = YES;
-        // [self.baseView addSubview:self.timeLabel];
-        // [self.timeLabel size:CGSizeMake(60, 20)];
-        // [self.timeLabel top:self.baseView.topAnchor padding:8];
-        // [self.timeLabel trailing:self.baseView.trailingAnchor padding:-8];
-        
         self.appName = [[UILabel alloc] init];
         self.appName.textColor = UIColor.labelColor;
         self.appName.font = [UIFont systemFontOfSize:16 weight:UIFontWeightBold];
@@ -60,7 +47,6 @@
         [self.appBundle top:self.appName.bottomAnchor padding:1];
         [self.appBundle leading:self.appImage.trailingAnchor padding:15];
         // [self.appBundle trailing:self.timeLabel.leadingAnchor padding:-10];
-        
         
         self.appVersion = [[UILabel alloc] init];
         self.appVersion.textColor = UIColor.tertiaryLabelColor;

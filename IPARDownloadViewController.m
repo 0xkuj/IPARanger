@@ -31,7 +31,7 @@ int pid;
     _lastCountrySelected = [NSString string];
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
-    _lastCountrySelected = [IPARUtils getMostUpdatedCountryFromFile] ? [IPARUtils getMostUpdatedCountryFromFile] : @"US";
+    _lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile] ? [IPARUtils getMostUpdatedDownloadCountryFromFile] : @"US";
     _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"CN: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
@@ -48,7 +48,7 @@ int pid;
     [self _setUpNavigationBar2];
     [self setupDownloadViewControllerStyle];
     [self populateTableWithExistingApps];
-    self.countryTableViewController = [[IPARCountryTableViewController alloc] init];
+    self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
 }
 
 - (void)barButtonItemTapped:(id)sender {
@@ -56,7 +56,7 @@ int pid;
 }
 
 - (void)updateCountry {
-    self.lastCountrySelected = [IPARUtils getMostUpdatedCountryFromFile];
+    self.lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile];
     self.countryButton.title = [NSString stringWithFormat:@"CN: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
 }
 
