@@ -32,17 +32,20 @@ int pid;
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
     _lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile] ? [IPARUtils getMostUpdatedDownloadCountryFromFile] : @"US";
-    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"CN: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
+    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
-                                                                 action:@selector(barButtonItemTapped:)];
+                                                                 action:@selector(countryButtonItemTapped:)];
+    NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
+    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
+    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
     _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
         [self stopScriptAndRemoveObserver];
     }];
     [self.downloadAlertController addAction:cancelAction];
-     self.navigationItem.leftBarButtonItems = @[self.editButtonItem, _countryButton];
+     self.navigationItem.leftBarButtonItems = @[_countryButton];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
     [self _setUpNavigationBar2];
@@ -51,13 +54,16 @@ int pid;
     self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
 }
 
-- (void)barButtonItemTapped:(id)sender {
+- (void)countryButtonItemTapped:(id)sender {
     [self presentViewController:self.countryTableViewController animated:YES completion:nil];
 }
 
 - (void)updateCountry {
     self.lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile];
     self.countryButton.title = [NSString stringWithFormat:@"CN: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
+    NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
 }
 
 // I THINK ALERT CONTROLLER WILL BE THE BEST OPTION HERE. LESS BUGS.!

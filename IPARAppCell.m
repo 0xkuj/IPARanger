@@ -35,8 +35,14 @@
         
         [self.appName top:self.appImage.topAnchor padding:-6.5];
         [self.appName leading:self.appImage.trailingAnchor padding:15];
-        //[self.appName trailing:self.timeLabel.leadingAnchor padding:-10];
-        
+        //Fit appname to the size of the cell
+        self.appName.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.baseView addConstraints:@[
+            [self.baseView.trailingAnchor constraintGreaterThanOrEqualToAnchor:self.appName.trailingAnchor constant:10],
+            [self.baseView.bottomAnchor constraintGreaterThanOrEqualToAnchor:self.appName.bottomAnchor constant:10]
+        ]];
+        self.appName.adjustsFontSizeToFitWidth = YES;
+        self.appName.minimumScaleFactor = 0.3; // Or any other value between 0 and      
         
         self.appBundle = [[UILabel alloc] init];
         self.appBundle.textColor = UIColor.tertiaryLabelColor;
@@ -46,6 +52,14 @@
         
         [self.appBundle top:self.appName.bottomAnchor padding:1];
         [self.appBundle leading:self.appImage.trailingAnchor padding:15];
+        //Fit bundle to the size of the cell
+        self.appBundle.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.baseView addConstraints:@[
+            [self.baseView.trailingAnchor constraintGreaterThanOrEqualToAnchor:self.appBundle.trailingAnchor constant:10],
+            [self.baseView.bottomAnchor constraintGreaterThanOrEqualToAnchor:self.appBundle.bottomAnchor constant:10]
+        ]];
+        self.appBundle.adjustsFontSizeToFitWidth = YES;
+        self.appBundle.minimumScaleFactor = 0.3; // Or any other value between 0 an
         // [self.appBundle trailing:self.timeLabel.leadingAnchor padding:-10];
         
         self.appVersion = [[UILabel alloc] init];

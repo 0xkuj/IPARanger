@@ -1,4 +1,4 @@
 #import <UIKit/UIKit.h>
 
-@interface IPARLoginScreenViewController : UIViewController
+@interface IPARLoginScreenViewController : UIViewController <UITextFieldDelegate>
 @end

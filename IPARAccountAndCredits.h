@@ -1,0 +1,2 @@
+@interface IPARAccountAndCredits : UIViewController
+@end

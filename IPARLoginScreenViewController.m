@@ -1,9 +1,8 @@
 #import "IPARLoginScreenViewController.h"
 #import "IPARSearchViewController.h"
 #import "IPARDownloadViewController.h"
+#import "IPARAccountAndCredits.h"
 #import "IPARUtils.h"
-
-#define sha256verification @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b"
 
 @interface IPARLoginScreenViewController ()
 @property (nonatomic) IBOutlet UITextField *emailTextField;
@@ -21,7 +20,6 @@
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
     [self setLoginButtons];
-    [self basicSanityChecks];
     [self.view addSubview:_emailTextField];
     [self.view addSubview:_passwordTextField];
     [self.view addSubview:_loginButton];
@@ -57,8 +55,6 @@
                                     repeats:NO];
 
     [self.view addSubview:textView];
-
-
 }
 
 /* provides the animation */
@@ -73,14 +69,24 @@
     self.emailTextField = [self setTextFieldsViewWithFrame:CGRectMake(40, 230, self.view.frame.size.width - 80, 45) title:@"Apple ID Email"];
     self.passwordTextField = [self setTextFieldsViewWithFrame:CGRectMake(40, 300, self.view.frame.size.width - 80, 45) title:@"Apple ID Password"];
     self.passwordTextField.secureTextEntry = YES;
+    self.emailTextField.delegate = self;
+    self.passwordTextField.delegate = self;
     self.loginButton = [self setLoginButtonPrefsWithFrame:CGRectMake(65, 420, self.view.frame.size.width - 130, 40) title:@"Login"];
     self.navigationController.navigationBarHidden = YES;
     CAGradientLayer *gradientLayer = [CAGradientLayer layer];
     gradientLayer.frame = self.view.bounds;
-    UIColor *lightBlue = [UIColor colorWithRed:0.15 green:0.1 blue:0.65 alpha:1.0];
-    UIColor *lightPurple = [UIColor colorWithRed:0.5 green:0.4 blue:0.2 alpha:1.0];
+    // UIColor *lightBlue = [UIColor colorWithRed:0.15 green:0.1 blue:0.65 alpha:1.0];
+    // UIColor *lightPurple = [UIColor colorWithRed:0.5 green:0.4 blue:0.2 alpha:1.0];
 
-    gradientLayer.colors = @[(id)[lightPurple CGColor], (id)[lightBlue CGColor]];
+    // CAGradientLayer *gradientLayer = [CAGradientLayer layer];
+    // gradientLayer.frame = self.view.bounds;
+    gradientLayer.colors = @[(id)[UIColor colorWithRed:0.13 green:0.35 blue:0.63 alpha:1.0].CGColor,
+                             (id)[UIColor colorWithRed:0.81 green:0.31 blue:0.35 alpha:1.0].CGColor,
+                             (id)[UIColor colorWithRed:0.95 green:0.64 blue:0.32 alpha:1.0].CGColor,
+                             (id)[UIColor colorWithRed:1.0 green:0.86 blue:0.54 alpha:1.0].CGColor,
+                             (id)[UIColor colorWithRed:1.0 green:0.94 blue:0.85 alpha:1.0].CGColor];
+    gradientLayer.startPoint = CGPointMake(0.5, 0.0);
+    gradientLayer.endPoint = CGPointMake(0.5, 1.0);
     [self.view.layer insertSublayer:gradientLayer atIndex:0];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
     [self.view addGestureRecognizer:tap];
@@ -92,7 +98,7 @@
     UIButton* loginButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [loginButton setTitle:@"Login" forState:UIControlStateNormal];
     [loginButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    loginButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.65 blue:0.0 alpha:1.0];
+    loginButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.1 blue:0.2 alpha:1.0];
     loginButton.layer.cornerRadius = 10;
     loginButton.layer.shadowColor = [UIColor blackColor].CGColor;
     loginButton.layer.shadowOffset = CGSizeMake(0.0, 2.0);
@@ -122,6 +128,7 @@
     textField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
     textField.backgroundColor = [UIColor colorWithRed:0.83 green:0.83 blue:0.83 alpha:1.0];
     textField.textColor = [UIColor blackColor];
+
     return textField;
 }
 
@@ -156,21 +163,12 @@
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
-    [textField resignFirstResponder];
-    return YES;
-}
-
-- (void)basicSanityChecks {
-    NSString *s = [IPARUtils sha256ForFileAtPath:IPATOOL_SCRIPT_PATH];
-    AlertActionBlock alertBlock = ^(void) {
-        exit(0);
-    };
-    if (s == nil) {
-        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"ipatool file was not found inside resources directory!" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
-    } else if (![s isEqualToString:sha256verification]) {
-        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Could not verify the integrity of files" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
+    if (textField == self.passwordTextField) {
+        [self handleLoginEmailPass];
+        return YES;
     }
-    NSLog(@"omriku ipatool binary was found. all good!");
+    [textField resignFirstResponder];
+    return NO;
 }
 
 - (void)handleLoginEmailPass {
@@ -290,6 +288,7 @@
     firstViewController.tabBarItem.title = @"Search";
     // Create the navigation controller for the first view controller
     UINavigationController *firstNavigationController = [[UINavigationController alloc] initWithRootViewController:firstViewController];
+
     // Create the second view controller
     IPARDownloadViewController *secondViewController = [[IPARDownloadViewController alloc] init];
     secondViewController.title = @"Download";
@@ -297,8 +296,15 @@
     secondViewController.tabBarItem.title = @"Download";
     // Create the navigation controller for the second view controller
     UINavigationController *secondNavigationController = [[UINavigationController alloc] initWithRootViewController:secondViewController];
+
+	IPARAccountAndCredits *thirdViewController = [[IPARAccountAndCredits alloc] init];
+	thirdViewController.title = @"Account";
+	thirdViewController.tabBarItem.image = [UIImage systemImageNamed:@"person.crop.circle"];
+	thirdViewController.tabBarItem.title = @"Account";
+    // Create the navigation controller for the second view controller
+    UINavigationController *thirdNavigationController = [[UINavigationController alloc] initWithRootViewController:thirdViewController];
     // Add the navigation controllers to the tab bar controller
-    tabBarController.viewControllers = @[firstNavigationController, secondNavigationController];    
+    tabBarController.viewControllers = @[firstNavigationController, secondNavigationController, thirdNavigationController];
     // Set the tab bar controller as the root view controller
     UIWindow *window = UIApplication.sharedApplication.delegate.window;
     window.rootViewController = tabBarController;

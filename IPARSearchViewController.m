@@ -23,6 +23,7 @@
 @implementation IPARSearchViewController
 
 //figure out best solution for countries. maybe in the menu, maybe in settings of account. its ugly af
+//next thing: build download screen. dont forget to add "nothing to show here"
 - (void)loadView {
     [super loadView];
     
@@ -48,12 +49,13 @@
     self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Search"];
     _lastCountrySelected = [NSString string];
     _lastCountrySelected = [IPARUtils getMostUpdatedSearchCountryFromFile] ? [IPARUtils getMostUpdatedSearchCountryFromFile] : @"US";
-    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Search Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
+    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
                                                                  action:@selector(countryButtonItemTapped:)];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
-    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                     
+    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
+    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                   
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
     self.navigationItem.leftBarButtonItem = _countryButton;
     [self _setUpNavigationBar];
@@ -68,7 +70,10 @@
 
 - (void)updateCountry {
     self.lastCountrySelected = [IPARUtils getMostUpdatedSearchCountryFromFile];
-    self.countryButton.title = [NSString stringWithFormat:@"Search Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]];
+    self.countryButton.title = [NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]];
+    NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];  
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
 }
 
 - (void)_setUpNavigationBar
@@ -178,7 +183,7 @@
     }
 
     UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    spinner.center = CGPointMake(130.5, 125);
+    spinner.center = CGPointMake(130.5, 115);
     spinner.color = [UIColor whiteColor];
     [spinner startAnimating];
     [alert.view addSubview:spinner];
