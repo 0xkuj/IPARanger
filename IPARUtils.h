@@ -32,5 +32,6 @@ typedef void (^AlertActionBlock)(void);
 + (NSString *)getMostUpdatedDownloadCountryFromFile;
 + (void)searchCountryToFile:(NSString *)accountCountry;
 + (NSString *)getMostUpdatedSearchCountryFromFile;
++ (UIImage *)getAppIconFromApple:(NSString *)bundleId;
 @end
 

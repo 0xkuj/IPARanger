@@ -254,34 +254,12 @@
             dictForApp[@"appName"] = parsedAppName[i];
             dictForApp[@"appBundle"] = parsedAppBundle[i];
             dictForApp[@"appVersion"] = parsedAppVersion[i];
-            dictForApp[@"appImage"] = [self getAppIconFromApple:parsedAppBundle[i]];
+            dictForApp[@"appImage"] = [IPARUtils getAppIconFromApple:parsedAppBundle[i]];
             self.searchResults[i] = dictForApp;
         }
     }
 }
 
-- (UIImage *)getAppIconFromApple:(NSString *)bundleId {
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/lookup?bundleId=%@", bundleId]];
-    NSData *data = [NSData dataWithContentsOfURL:url];
-
-    if (data) {
-        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
-        NSArray *results = json[@"results"];
-        
-        if (results.count > 0) {
-            NSDictionary *appInfo = results[0];
-            NSString *iconUrlString = appInfo[@"artworkUrl100"];
-            NSURL *iconUrl = [NSURL URLWithString:iconUrlString];
-            NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
-            UIImage *iconImage = [UIImage imageWithData:iconData];
-            NSLog(@"omriku returning image: %@ for bundle: %@", iconImage, bundleId);
-            return iconImage;
-            // Use the icon image in your list
-        }
-    }
-    NSLog(@"omriku returns nil FOR BUNDLE: %@", bundleId);
-    return nil;
-}
 //bundle - works well! need to see if that is hitting performace. dont really care for 1-2 more seconds!
 - (NSArray *)stambundle:(NSArray *)strings {
     NSError *error = nil;

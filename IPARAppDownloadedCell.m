@@ -1,6 +1,6 @@
-#import "IPARAppCell.h"
+#import "IPARAppDownloadedCell.h"
 
-@implementation IPARAppCell
+@implementation IPARAppDownloadedCell
 
 -(id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
     
@@ -44,33 +44,33 @@
         self.appName.adjustsFontSizeToFitWidth = YES;
         self.appName.minimumScaleFactor = 0.3; // Or any other value between 0 and      
         
-        self.appBundle = [[UILabel alloc] init];
-        self.appBundle.textColor = UIColor.tertiaryLabelColor;
-        self.appBundle.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
-        self.appBundle.textAlignment = NSTextAlignmentLeft;
-        [self.baseView addSubview:self.appBundle];
+        self.appFilename = [[UILabel alloc] init];
+        self.appFilename.textColor = UIColor.tertiaryLabelColor;
+        self.appFilename.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
+        self.appFilename.textAlignment = NSTextAlignmentLeft;
+        [self.baseView addSubview:self.appFilename];
         
-        [self.appBundle top:self.appName.bottomAnchor padding:1];
-        [self.appBundle leading:self.appImage.trailingAnchor padding:15];
+        [self.appFilename top:self.appName.bottomAnchor padding:1];
+        [self.appFilename leading:self.appImage.trailingAnchor padding:15];
         //Fit bundle to the size of the cell
-        self.appBundle.translatesAutoresizingMaskIntoConstraints = NO;
+        self.appFilename.translatesAutoresizingMaskIntoConstraints = NO;
         [self.baseView addConstraints:@[
-            [self.baseView.trailingAnchor constraintGreaterThanOrEqualToAnchor:self.appBundle.trailingAnchor constant:10],
-            [self.baseView.bottomAnchor constraintGreaterThanOrEqualToAnchor:self.appBundle.bottomAnchor constant:10]
+            [self.baseView.trailingAnchor constraintGreaterThanOrEqualToAnchor:self.appFilename.trailingAnchor constant:10],
+            [self.baseView.bottomAnchor constraintGreaterThanOrEqualToAnchor:self.appFilename.bottomAnchor constant:10]
         ]];
-        self.appBundle.adjustsFontSizeToFitWidth = YES;
-        self.appBundle.minimumScaleFactor = 0.3; // Or any other value between 0 an
-        // [self.appBundle trailing:self.timeLabel.leadingAnchor padding:-10];
+        self.appFilename.adjustsFontSizeToFitWidth = YES;
+        self.appFilename.minimumScaleFactor = 0.3; // Or any other value between 0 an
+        // [self.appFilename trailing:self.timeLabel.leadingAnchor padding:-10];
         
-        self.appVersion = [[UILabel alloc] init];
-        self.appVersion.textColor = UIColor.tertiaryLabelColor;
-        self.appVersion.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
-        self.appVersion.textAlignment = NSTextAlignmentLeft;
-        [self.baseView addSubview:self.appVersion];
+        self.appSize = [[UILabel alloc] init];
+        self.appSize.textColor = UIColor.tertiaryLabelColor;
+        self.appSize.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
+        self.appSize.textAlignment = NSTextAlignmentLeft;
+        [self.baseView addSubview:self.appSize];
         
-        [self.appVersion top:self.appBundle.bottomAnchor padding:0];
-        [self.appVersion leading:self.appImage.trailingAnchor padding:15];
-        // [self.appVersion trailing:self.timeLabel.leadingAnchor padding:-10];      
+        [self.appSize top:self.appFilename.bottomAnchor padding:0];
+        [self.appSize leading:self.appImage.trailingAnchor padding:15];
+        // [self.appSize trailing:self.timeLabel.leadingAnchor padding:-10];      
     }
     
     return self;
@@ -81,8 +81,8 @@
     [super prepareForReuse];
     self.appImage.image = nil;
     self.appName.text = nil;
-    self.appBundle.text = nil;
-    self.appVersion.text = nil;
+    self.appFilename.text = nil;
+    self.appSize.text = nil;
 }
 
 @end

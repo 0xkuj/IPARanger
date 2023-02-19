@@ -153,5 +153,28 @@ int spawnedProcessPid;
 
     return [[NSString alloc] initWithBytes:bytes length:countryCode.length *sizeof(wchar_t) encoding:NSUTF32LittleEndianStringEncoding];
 }
+
++ (UIImage *)getAppIconFromApple:(NSString *)bundleId {
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/lookup?bundleId=%@", bundleId]];
+    NSData *data = [NSData dataWithContentsOfURL:url];
+
+    if (data) {
+        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
+        NSArray *results = json[@"results"];
+        
+        if (results.count > 0) {
+            NSDictionary *appInfo = results[0];
+            NSString *iconUrlString = appInfo[@"artworkUrl100"];
+            NSURL *iconUrl = [NSURL URLWithString:iconUrlString];
+            NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
+            UIImage *iconImage = [UIImage imageWithData:iconData];
+            NSLog(@"omriku returning image: %@ for bundle: %@", iconImage, bundleId);
+            return iconImage;
+            // Use the icon image in your list
+        }
+    }
+    NSLog(@"omriku returns nil FOR BUNDLE: %@", bundleId);
+    return nil;
+}
 @end
 

@@ -2,6 +2,7 @@
 #import "IPARLoginScreenViewController.h"
 #import "IPARCountryTableViewController.h"
 #import "IPARUtils.h"
+#import "IPARAppDownloadedCell.h"
 
 @interface IPARDownloadViewController ()
 @property (nonatomic, strong) NSMutableArray *appsBeingDownloaded;
@@ -29,6 +30,11 @@ int pid;
     _lastBundleDownload = [NSString string];
     _linesErrorOutput = [NSMutableArray array];
     _lastCountrySelected = [NSString string];
+    self.tableView.backgroundColor = [UIColor clearColor];
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+    self.tableView.rowHeight = 80;
+    self.tableView.estimatedRowHeight = 100;
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
     _lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile] ? [IPARUtils getMostUpdatedDownloadCountryFromFile] : @"US";
@@ -161,10 +167,33 @@ int pid;
             continue;
         }
         NSNumber *fileSize = [attributes objectForKey:NSFileSize];
-        [self.existingApps addObject:@{@"name": fileName, @"size": fileSize}];
+        NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName];
+        // Load the Info.plist file from the IPA file
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p %@ Payload/*.app/Info.plist | grep -A 1 CFBundleName", ipaFilePath]];
+        NSString *appName = [self parseBundleFromCFBundleName:standardAndErrorOutputs[@"standardOutput"][1]];
+        //need to do that with the command from ealier.. think how you combine those two..
+        UIImage *appImage = [IPARUtils getAppIconFromApple:[self bundleFromFilename:ipaFilePath]];
+        [self.existingApps addObject:@{@"filename": fileName, @"size": fileSize, @"appname" : appName}];
     }
     [self.tableView reloadData];
     // Now you can use the `ipaFileInfos` array to populate your table view.
+}
+
+- (NSString *)bundleFromFilename:(NSString *)filename {
+    NSString *pattern = @"^[^_]+";
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
+    NSTextCheckingResult *result = [regex firstMatchInString:filename options:0 range:NSMakeRange(0, filename.length)];
+    NSString *bundleName = [filename substringWithRange:result.range];
+    NSLog(@"omriku bundle name?!? %@", bundleName);
+    return bundleName;
+}
+
+- (NSString *)parseBundleFromCFBundleName:(NSString *)CFBundleName {
+    NSString *pattern = @"<string>(.*?)</string>";
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionDotMatchesLineSeparators error:nil];
+    NSTextCheckingResult *result = [regex firstMatchInString:CFBundleName options:0 range:NSMakeRange(0, CFBundleName.length)];
+    NSString *substring = [CFBundleName substringWithRange:[result rangeAtIndex:1]];
+    return substring;
 }
 
 - (void)addButtonTapped:(id)sender {
@@ -214,13 +243,27 @@ int pid;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-	static NSString *CellIdentifier = @"Cell";
-	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
-	if (!cell) {
-		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
-	}
+    IPARAppDownloadedCell *cell = [tableView dequeueReusableCellWithIdentifier:@"IPARAppDownloadedCell"];
+        
+    if (cell == nil) {
+        cell = [[IPARAppDownloadedCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"IPARAppDownloadedCell"];
+    }
+    UIView *selectionView = [UIView new];
+    selectionView.backgroundColor = UIColor.clearColor;
+    [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
+    cell.backgroundColor = UIColor.clearColor;
+    cell.appName.text = self.existingApps[indexPath.row][@"appname"];
+    cell.appFilename.text = self.existingApps[indexPath.row][@"filename"];
+    cell.appSize.text = [NSString stringWithFormat:@"%@", self.existingApps[indexPath.row][@"size"]];
+    //cell.appImage.image = nil;
+    return cell;
+	// static NSString *CellIdentifier = @"Cell";
+	// UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
+	// if (!cell) {
+	// 	cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
+	// }
 
-    cell.textLabel.text = [NSString stringWithFormat:@"appname: %@ size: %@", self.existingApps[indexPath.row][@"name"], self.existingApps[indexPath.row][@"size"]]; 
+    cell.textLabel.text = [NSString stringWithFormat:@"appname: %@ size: %@", self.existingApps[indexPath.row][@"filename"], self.existingApps[indexPath.row][@"size"]]; 
 	return cell;
 }
 
