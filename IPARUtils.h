@@ -33,5 +33,6 @@ typedef void (^AlertActionBlock)(void);
 + (void)searchCountryToFile:(NSString *)accountCountry;
 + (NSString *)getMostUpdatedSearchCountryFromFile;
 + (UIImage *)getAppIconFromApple:(NSString *)bundleId;
++ (NSString *)humanReadableSizeForBytes:(long long)bytes;
 @end
 

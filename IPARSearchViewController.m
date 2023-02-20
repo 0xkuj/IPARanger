@@ -27,7 +27,7 @@
 - (void)loadView {
     [super loadView];
     
-    self.tableView.backgroundColor = [UIColor clearColor];
+    self.tableView.backgroundColor = UIColor.systemBackgroundColor;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
     self.tableView.rowHeight = 80;
@@ -183,8 +183,8 @@
     }
 
     UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    spinner.center = CGPointMake(130.5, 115);
-    spinner.color = [UIColor whiteColor];
+    spinner.center = CGPointMake(130.5, 110);
+    spinner.color = [UIColor grayColor];
     [spinner startAnimating];
     [alert.view addSubview:spinner];
     [self presentViewController:alert animated:YES completion:nil];
@@ -254,7 +254,7 @@
             dictForApp[@"appName"] = parsedAppName[i];
             dictForApp[@"appBundle"] = parsedAppBundle[i];
             dictForApp[@"appVersion"] = parsedAppVersion[i];
-            dictForApp[@"appImage"] = [IPARUtils getAppIconFromApple:parsedAppBundle[i]];
+            dictForApp[@"appImage"] = [IPARUtils getAppIconFromApple:parsedAppBundle[i]] ? : [UIImage systemImageNamed:@"questionmark.diamond.fill"];
             self.searchResults[i] = dictForApp;
         }
     }

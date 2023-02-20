@@ -5,7 +5,6 @@
 #import "IPARAppDownloadedCell.h"
 
 @interface IPARDownloadViewController ()
-@property (nonatomic, strong) NSMutableArray *appsBeingDownloaded;
 @property (nonatomic, strong) NSMutableArray *existingApps;
 @property (nonatomic) UIProgressView *progressView;
 @property (nonatomic) NSString *currentPrecentageDownload;
@@ -16,25 +15,31 @@
 @property (nonatomic, strong) IPARCountryTableViewController *countryTableViewController;
 @property (nonatomic) UIBarButtonItem *countryButton;
 @property (nonatomic) NSString *lastCountrySelected;
+@property (nonatomic) UILabel *noDataLabel;
+@property (nonatomic) BOOL isRefreshing;
 @end
 
-int pid;
-
-//IMPLEMENT SELECT COUNTRY!
 @implementation IPARDownloadViewController
 - (void)loadView {
     [super loadView];
-    _appsBeingDownloaded = [NSMutableArray array];
+    _isRefreshing = NO;
     _existingApps = [NSMutableArray array];
     _currentPrecentageDownload = [NSString string];
     _lastBundleDownload = [NSString string];
     _linesErrorOutput = [NSMutableArray array];
     _lastCountrySelected = [NSString string];
-    self.tableView.backgroundColor = [UIColor clearColor];
+    self.tableView.backgroundColor = UIColor.systemBackgroundColor;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
     self.tableView.rowHeight = 80;
     self.tableView.estimatedRowHeight = 100;
+    // Create a label with the text you want to display
+    _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
+    _noDataLabel.numberOfLines = 2;
+    _noDataLabel.textColor = [UIColor grayColor];
+    _noDataLabel.textAlignment = NSTextAlignmentCenter;
+    // Set the label as the background view of the table view
+    self.tableView.backgroundView = _noDataLabel;
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
     _lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile] ? [IPARUtils getMostUpdatedDownloadCountryFromFile] : @"US";
@@ -50,14 +55,48 @@ int pid;
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
         [self stopScriptAndRemoveObserver];
     }];
+    UIRefreshControl *refreshControl = [[UIRefreshControl alloc] init];
+    [refreshControl addTarget:self action:@selector(handleRefresh:) forControlEvents:UIControlEventValueChanged];
+    [self.tableView addSubview:refreshControl];
     [self.downloadAlertController addAction:cancelAction];
      self.navigationItem.leftBarButtonItems = @[_countryButton];
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
     [self _setUpNavigationBar2];
     [self setupDownloadViewControllerStyle];
-    [self populateTableWithExistingApps];
+    [self refreshTableData];
     self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
+}
+
+- (void)handleRefresh:(UIRefreshControl *)refreshControl {
+    if (self.isRefreshing) {
+        return;
+    }
+    self.isRefreshing = YES;
+    [self refreshTableData];
+    [refreshControl endRefreshing];
+    self.isRefreshing = NO;
+}
+
+- (void)refreshTableData {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Loading Downloaded Apps.."
+                                                                message:@"\n\n\n"
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    spinner.center = CGPointMake(130.5, 75);
+    spinner.color = [UIColor grayColor];
+    [spinner startAnimating];
+    [alert.view addSubview:spinner];
+    [self presentViewController:alert animated:YES completion:nil];
+
+    // Dispatch the command to a background queue
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        [self populateTableWithExistingApps];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self dismissViewControllerAnimated:YES completion:nil];
+            [self.tableView reloadData];
+        });
+    });
 }
 
 - (void)countryButtonItemTapped:(id)sender {
@@ -66,7 +105,7 @@ int pid;
 
 - (void)updateCountry {
     self.lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile];
-    self.countryButton.title = [NSString stringWithFormat:@"CN: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
+    self.countryButton.title = [NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
@@ -166,34 +205,37 @@ int pid;
             NSLog(@"omriku Error getting attributes of file at path: %@", filePath);
             continue;
         }
-        NSNumber *fileSize = [attributes objectForKey:NSFileSize];
+        long long fileSize = [attributes fileSize];
+        NSString *humanReadableSize = [IPARUtils humanReadableSizeForBytes:fileSize];
         NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName];
         // Load the Info.plist file from the IPA file
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p %@ Payload/*.app/Info.plist | grep -A 1 CFBundleName", ipaFilePath]];
-        NSString *appName = [self parseBundleFromCFBundleName:standardAndErrorOutputs[@"standardOutput"][1]];
+        NSString *str = @"\"%s (%s)\\n\"";
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p %@ Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(Name|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
+        NSString *appName = [NSString string];
+        NSString *bundleName = [NSString string];
+        if ([standardAndErrorOutputs[@"standardOutput"][0] containsString:@"CFBundleName"]) {
+            appName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][0]];
+            bundleName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][1]];
+        } else {
+            appName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][1]];
+            bundleName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][0]];
+        }
+        NSLog(@"omriku bundle? %@, appname: %@", bundleName, appName);
         //need to do that with the command from ealier.. think how you combine those two..
-        UIImage *appImage = [IPARUtils getAppIconFromApple:[self bundleFromFilename:ipaFilePath]];
-        [self.existingApps addObject:@{@"filename": fileName, @"size": fileSize, @"appname" : appName}];
+        UIImage *appImage = [IPARUtils getAppIconFromApple:bundleName];
+        if (appImage == nil) {
+            appImage = [UIImage systemImageNamed:@"questionmark.diamond.fill"];
+        }
+        [self.existingApps addObject:@{@"filename": fileName, @"size": humanReadableSize, @"appname" : appName, @"appimage" : appImage}];
     }
-    [self.tableView reloadData];
-    // Now you can use the `ipaFileInfos` array to populate your table view.
 }
 
-- (NSString *)bundleFromFilename:(NSString *)filename {
-    NSString *pattern = @"^[^_]+";
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
-    NSTextCheckingResult *result = [regex firstMatchInString:filename options:0 range:NSMakeRange(0, filename.length)];
-    NSString *bundleName = [filename substringWithRange:result.range];
-    NSLog(@"omriku bundle name?!? %@", bundleName);
-    return bundleName;
-}
-
-- (NSString *)parseBundleFromCFBundleName:(NSString *)CFBundleName {
-    NSString *pattern = @"<string>(.*?)</string>";
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionDotMatchesLineSeparators error:nil];
-    NSTextCheckingResult *result = [regex firstMatchInString:CFBundleName options:0 range:NSMakeRange(0, CFBundleName.length)];
-    NSString *substring = [CFBundleName substringWithRange:[result rangeAtIndex:1]];
-    return substring;
+- (NSString *)parseValueFromKey:(NSString *)CFKey{
+    NSLog(@"omriku parsing value from: %@", CFKey);
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^(.+?)\\s*\\(" options:0 error:nil];
+    NSTextCheckingResult *match = [regex firstMatchInString:CFKey options:0 range:NSMakeRange(0, [CFKey length])];
+    NSString *result = [CFKey substringWithRange:[match rangeAtIndex:1]];
+    return result;
 }
 
 - (void)addButtonTapped:(id)sender {
@@ -239,7 +281,15 @@ int pid;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    return self.existingApps.count + self.appsBeingDownloaded.count;
+    NSLog(@"omriku counting rows.. %lu",self.existingApps.count);
+    if (self.existingApps.count > 0) {
+        //fixing scrolling issue!!
+        self.noDataLabel.text = @" \n  ";
+        //adding one for show more button
+        return self.existingApps.count;
+    }
+    self.noDataLabel.text = @"Nothing to show here.\nStart by clicking the download icon!";
+    return 0;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -255,7 +305,7 @@ int pid;
     cell.appName.text = self.existingApps[indexPath.row][@"appname"];
     cell.appFilename.text = self.existingApps[indexPath.row][@"filename"];
     cell.appSize.text = [NSString stringWithFormat:@"%@", self.existingApps[indexPath.row][@"size"]];
-    //cell.appImage.image = nil;
+    cell.appImage.image = self.existingApps[indexPath.row][@"appimage"];
     return cell;
 	// static NSString *CellIdentifier = @"Cell";
 	// UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -312,10 +362,10 @@ int pid;
         if ([percentage containsString:@"100"]) {
             NSLog(@"omriku have 100!");
             [[NSNotificationCenter defaultCenter] removeObserver:self name:NSFileHandleDataAvailableNotification object:nil];
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-                [self populateTableWithExistingApps];
-                //[self.downloadViewController dismissViewControllerAnimated:YES completion:nil];
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
                 [self.downloadAlertController dismissViewControllerAnimated:YES completion:nil];
+                [self refreshTableData];
+                //[self.downloadViewController dismissViewControllerAnimated:YES completion:nil];
             });
         }
     }

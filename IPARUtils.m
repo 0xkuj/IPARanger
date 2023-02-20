@@ -176,5 +176,20 @@ int spawnedProcessPid;
     NSLog(@"omriku returns nil FOR BUNDLE: %@", bundleId);
     return nil;
 }
+
++ (NSString *)humanReadableSizeForBytes:(long long)bytes {
+    NSArray *suffixes = @[@"B", @"KB", @"MB", @"GB", @"TB"];
+    int suffixIndex = 0;
+    double size = (double)bytes;
+    
+    while (size > 1024 && suffixIndex < suffixes.count - 1) {
+        size /= 1024;
+        suffixIndex++;
+    }
+    
+    NSString *sizeString = [NSString stringWithFormat:@"%.1f %@", size, suffixes[suffixIndex]];
+    return sizeString;
+}
+
 @end
 
