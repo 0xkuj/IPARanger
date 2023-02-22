@@ -40,18 +40,23 @@ int spawnedProcessPid;
                       message:(NSString *)message 
                       numberOfActions:(NSUInteger)numberOfActions 
                       buttonText:(NSString *)buttonText 
-                      alertBlock:(AlertActionBlock)block 
+                      alertConfirmationBlock:(AlertActionBlock)confirmationBlock 
+                      alertCancelBlock:(AlertActionBlock)cancelBlock
                       presentOn:(id)viewController {
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction *okAction = [UIAlertAction actionWithTitle:buttonText style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        if (block != nil) {
-            block();
+        if (confirmationBlock != nil) {
+            confirmationBlock();
         }
     }];
     [alert addAction:okAction];
     if (numberOfActions > 1) {
-        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+            if (cancelBlock != nil) {
+                cancelBlock();
+            }
+        }];
         [alert addAction:cancelAction];
     }
 

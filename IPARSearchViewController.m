@@ -119,7 +119,7 @@
 }
 
 - (void)logoutAction {
-    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertBlock:[self getAlertBlockForLogout] presentOn:self];
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:[self getAlertBlockForLogout] alertCancelBlock:nil presentOn:self];
 }
 
 - (AlertActionBlock)getAlertBlockForLogout {  
@@ -151,7 +151,7 @@
         }
         
         if (self.latestSearchTerm == nil || [self.latestSearchTerm stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
-            [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"App Name cannot be empty" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+            [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"App Name cannot be empty" numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
             return;
         }    
         [self runSearchCommand]; 
@@ -218,7 +218,7 @@
                 errorToShow = obj;
             }
             [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorToShow numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorToShow numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
             }];
             return YES;
         } 
@@ -384,7 +384,7 @@
             pasteboard.string = self.searchResults[indexPath.row][@"appBundle"];
         };
 
-        [IPARUtils presentMessageWithTitle:@"IPARanger\nCopy Bundle" message:[NSString stringWithFormat:@"App selected: %@\n\nBundle ID: %@",self.searchResults[indexPath.row][@"appName"], self.searchResults[indexPath.row][@"appBundle"]] numberOfActions:2 buttonText:@"Copy Bundle" alertBlock:alertBlock presentOn:self];
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nCopy Bundle" message:[NSString stringWithFormat:@"App selected: %@\n\nBundle ID: %@",self.searchResults[indexPath.row][@"appName"], self.searchResults[indexPath.row][@"appBundle"]] numberOfActions:2 buttonText:@"Copy Bundle" alertConfirmationBlock:alertBlock alertCancelBlock:nil presentOn:self];
     } else {
         self.limitSearch += APPS_SEARCH_INITIAL_LIMIT;
         [self runSearchCommand];

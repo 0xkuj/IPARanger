@@ -19,6 +19,7 @@
 @property (nonatomic) BOOL isRefreshing;
 @end
 
+//next thing: account screen / clean code!
 @implementation IPARDownloadViewController
 - (void)loadView {
     [super loadView];
@@ -159,7 +160,7 @@
 }
 
 - (void)logoutAction {
-    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertBlock:[self getAlertBlockForLogout] presentOn:self];
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:[self getAlertBlockForLogout] alertCancelBlock:nil presentOn:self];
 }
 
 - (AlertActionBlock)getAlertBlockForLogout {  
@@ -245,7 +246,7 @@
         UITextField *textField = alert.textFields.firstObject;
         self.lastBundleDownload = textField.text;
         if (self.lastBundleDownload == nil || [self.lastBundleDownload stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
-            [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Bundle ID cannot be empty" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+            [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Bundle ID cannot be empty" numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
         }
         //[self presentViewController:self.downloadViewController animated:YES completion:nil];
         [self showDownloadDialog];
@@ -317,15 +318,144 @@
 	return cell;
 }
 
-- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
-	//[self.searchResults removeObjectAtIndex:indexPath.row];
-	[tableView deleteRowsAtIndexPaths:@[ indexPath ] withRowAnimation:UITableViewRowAnimationAutomatic];
-}
+// - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
+// 	//[self.searchResults removeObjectAtIndex:indexPath.row];
+// 	[tableView deleteRowsAtIndexPaths:@[ indexPath ] withRowAnimation:UITableViewRowAnimationAutomatic];
+// }
 
 #pragma mark - Table View Delegate
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-	[tableView deselectRowAtIndexPath:indexPath animated:YES];
+   UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+    
+    [UIView animateWithDuration:0.08 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        cell.transform = CGAffineTransformMakeScale(0.90, 0.90);
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.08 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            cell.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleActionSheet];
+    
+    // Create actions
+    UIAlertAction *openInFilzaAction = [UIAlertAction actionWithTitle:@"Open in Filza" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+       [self openInFilza:self.existingApps[indexPath.row][@"filename"]];
+    }];
+    UIAlertAction *shareAction = [UIAlertAction actionWithTitle:@"Share" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self shareFile:self.existingApps[indexPath.row][@"filename"]];
+        
+    }];
+    UIAlertAction *renameAction = [UIAlertAction actionWithTitle:@"Rename File" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self renameFileAtPath:self.existingApps[indexPath.row][@"filename"]];
+        
+    }];
+    UIAlertAction *deleteAction = [UIAlertAction actionWithTitle:@"Delete" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
+        [self deleteFile:self.existingApps[indexPath.row][@"filename"] index:indexPath];
+    }];
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+    
+    // Add actions to alert
+    [alert addAction:openInFilzaAction];
+    [alert addAction:renameAction];
+    [alert addAction:shareAction];
+    [alert addAction:deleteAction];
+    [alert addAction:cancelAction];
+    
+    // Present alert
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
+
+- (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
+    UIContextualAction *deleteAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive title:@"Delete" handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
+        [self deleteFile:self.existingApps[indexPath.row][@"filename"] index:indexPath];
+    }];
+    
+    UIImage *shareImage = [UIImage systemImageNamed:@"square.and.arrow.up"];
+    UIContextualAction *shareAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:@"Share" handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {        // Share the file using a UIActivityViewController
+        [self shareFile:self.existingApps[indexPath.row][@"filename"]];
+    }];
+    shareAction.image = shareImage;
+    shareAction.backgroundColor = [UIColor blueColor];
+    
+    UISwipeActionsConfiguration *config = [UISwipeActionsConfiguration configurationWithActions:@[deleteAction, shareAction]];
+    return config;
+}
+
+- (void)deleteFile:(NSString *)pathToFile index:(NSIndexPath *)indexPath {
+    AlertActionBlock alertConfirmationBlock = ^(void) {
+        // Delete the file from the data source
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        NSError *error;
+        BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, pathToFile] error:&error];
+        if (success == NO) {
+            NSLog(@"Error deleting file: %@", error);
+        } 
+        [self.existingApps removeObjectAtIndex:indexPath.row];
+        [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+    };
+
+    AlertActionBlock alertCancelBlock = ^(void) {
+        if (self.tableView.editing) {
+            [self.tableView setEditing:NO animated:YES];
+            [self.tableView reloadData];
+        }
+    };
+
+    NSString *confirmation = [NSString stringWithFormat:@"You are about to delete file: %@\n\nAre you sure?", self.existingApps[indexPath.row][@"filename"]];
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nDelete File" message:confirmation numberOfActions:2 buttonText:@"YES" alertConfirmationBlock:alertConfirmationBlock alertCancelBlock:alertCancelBlock presentOn:self];
+}
+
+- (void)shareFile:(NSString *)pathToFile {
+    NSURL *fileURL = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, pathToFile]];
+    NSArray *activityItems = @[fileURL];
+    
+    UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:activityItems applicationActivities:nil];
+    [self presentViewController:activityVC animated:YES completion:nil];
+}
+
+- (void)openInFilza:(NSString *)pathToFile {
+	UIApplication *application = [UIApplication sharedApplication];
+	NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:@"filza://%@%@", IPARANGER_DOCUMENTS_LIBRARY, pathToFile]];
+	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+}
+
+- (void)renameFileAtPath:(NSString *)path {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
+    // Get the current file name and path
+    NSString *fullPath = [NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, path];
+    NSString *currentFileName = [fullPath lastPathComponent];
+    NSString *currentDirectoryPath = [fullPath stringByDeletingLastPathComponent];
+    
+    // Create an alert controller with a text field for the new file name
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"IPARanger\nRename File\n\nDont forget to add '.ipa' at the end of your file" message:nil preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.clearButtonMode = UITextFieldViewModeWhileEditing;
+        textField.text = currentFileName;
+    }];
+    
+    // Add rename and cancel actions
+    UIAlertAction *renameAction = [UIAlertAction actionWithTitle:@"Rename" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        NSString *newFileName = alert.textFields.firstObject.text;
+        if (![newFileName isEqualToString:currentFileName]) {
+            NSString *newFilePath = [currentDirectoryPath stringByAppendingPathComponent:newFileName];
+            NSError *error = nil;
+            BOOL success = [fileManager moveItemAtPath:fullPath toPath:newFilePath error:&error];
+            if (success) {
+                NSLog(@"File renamed successfully.");
+                [self refreshTableData];
+            } else {
+                NSLog(@"Error renaming file: %@", error);
+            }
+        }
+    }];
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+    
+    // Add actions to alert and present it
+    [alert addAction:renameAction];
+    [alert addAction:cancelAction];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 //==> ❌  [Error] The country provided does not match with the account you are using. Supply a valid country using the "--country" flag
@@ -394,12 +524,12 @@
 
     NSString *errorForDialog = [NSString string];
     if ([errorMessage containsString:@"Country"] || [errorMessage containsString:@"country"]) {
-        errorForDialog = @"Mismatch Country Code\nMake sure the country code you supplied matches the country your account is linked to";
+        errorForDialog = @"Mismatch Country Code\nMake sure the 'Download Appstore' country you provided matches the country your account is linked to";
     } else if ([errorMessage.lowercaseString rangeOfString:token.lowercaseString].location != NSNotFound ||
                [errorMessage.lowercaseString rangeOfString:login.lowercaseString].location != NSNotFound || 
                [errorMessage.lowercaseString rangeOfString:authentication.lowercaseString].location != NSNotFound) {
         errorForDialog = @"There was an issue with your token\nPlease logout and then login again with your account and try again";
-        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorForDialog numberOfActions:1 buttonText:@"Logout" alertBlock:[self getAlertBlockForLogout] presentOn:self];
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorForDialog numberOfActions:1 buttonText:@"Logout" alertConfirmationBlock:[self getAlertBlockForLogout] alertCancelBlock:nil presentOn:self];
         return;
     } else if ([errorMessage.lowercaseString rangeOfString:cantFindApp.lowercaseString].location != NSNotFound)
     {
@@ -408,7 +538,7 @@
         errorForDialog = errorMessage;
     }
 
-    [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorForDialog numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:errorForDialog numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
 }        
 
 

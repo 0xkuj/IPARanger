@@ -63,9 +63,9 @@
         exit(0);
     };
     if (s == nil) {
-        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"ipatool file was not found inside resources directory!" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"ipatool file was not found inside resources directory!" numberOfActions:1 buttonText:@"Exit IPARanger" alertConfirmationBlock:alertBlock alertCancelBlock:nil presentOn:self];
     } else if (![s isEqualToString:sha256verification]) {
-        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Could not verify the integrity of files" numberOfActions:1 buttonText:@"Exit IPARanger" alertBlock:alertBlock presentOn:self];
+        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Could not verify the integrity of files" numberOfActions:1 buttonText:@"Exit IPARanger" alertConfirmationBlock:alertBlock alertCancelBlock:nil presentOn:self];
     }
     NSLog(@"omriku ipatool binary was found. all good!");
 }

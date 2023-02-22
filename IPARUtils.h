@@ -22,7 +22,7 @@ typedef void (^AlertActionBlock)(void);
 
 @interface IPARUtils : NSObject
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command;
-+ (void)presentMessageWithTitle:(NSString *)title message:(NSString *)message numberOfActions:(NSUInteger)numberOfActions buttonText:(NSString *)buttonText alertBlock:(AlertActionBlock)block presentOn:(id)viewController;
++ (void)presentMessageWithTitle:(NSString *)title message:(NSString *)message numberOfActions:(NSUInteger)numberOfActions buttonText:(NSString *)buttonText alertConfirmationBlock:(AlertActionBlock)confirmationBlock alertCancelBlock:(AlertActionBlock)cancelBlock presentOn:(id)viewController;
 + (NSString *)sha256ForFileAtPath:(NSString *)filePath;
 + (void)loginToFile:(NSString *)userEmail;
 + (void)logoutToFile;

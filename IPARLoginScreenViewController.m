@@ -197,11 +197,11 @@
                     }];
                 } else if ([obj containsString:@"Missing value for"]) {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
                     }];
                 } else {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
                     }];
                 }
             }
@@ -251,11 +251,11 @@
                 NSLog(@"omriku line error :%@", obj);
                 if ([obj containsString:@"An unknown error has occurred"]) {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Can't log you in\nCheck your Apple ID and Apple ID Password and try again" numberOfActions:1 buttonText:@"Try Again" alertBlock:nil presentOn:self];
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Can't log you in\nCheck your Apple ID and Apple ID Password and try again" numberOfActions:1 buttonText:@"Try Again" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
                     }];
                 } else {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertBlock:nil presentOn:self];
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
                     }];
                 }
             }
