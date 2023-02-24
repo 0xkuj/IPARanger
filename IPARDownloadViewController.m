@@ -20,6 +20,7 @@
 @end
 
 //improve download progress bar, its ugly.
+//bundle casuing crash if many apps. check why!!
 @implementation IPARDownloadViewController
 - (void)loadView {
     [super loadView];
@@ -65,7 +66,7 @@
     self.tableView.delegate = self;
     [self _setUpNavigationBar2];
     [self setupDownloadViewControllerStyle];
-    //[self refreshTableData];
+    [self refreshTableData];
     self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
 }
 
