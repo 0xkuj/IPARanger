@@ -65,7 +65,7 @@
     self.tableView.delegate = self;
     [self _setUpNavigationBar2];
     [self setupDownloadViewControllerStyle];
-    [self refreshTableData];
+    //[self refreshTableData];
     self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
 }
 
@@ -241,7 +241,6 @@
 
     // Get the size of each "ipa" file
     [self.existingApps removeAllObjects];
-    NSMutableArray *ipaFileInfos = [NSMutableArray array];
     for (NSString *fileName in ipaFiles) {
         NSLog(@"omriku checking file: %@", fileName);
         NSString *filePath = [IPARANGER_DOCUMENTS_LIBRARY stringByAppendingPathComponent:fileName];
