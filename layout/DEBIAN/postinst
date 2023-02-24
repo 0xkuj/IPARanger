@@ -7,5 +7,8 @@ chown -R 501:501 $FILES_DIR
 if [ $? -ne 0 ]; then
   echo "Settings up permissions FAILED with exit status $?. this may cause unexpected behavior"
 else
-  echo "Settings up permissions is done. ENJOY!"
+  echo "Settings up permissions is done.!"
+  echo "Running uicache just in case the app wont appear.."
+  uicache
+  echo "All done. enjoy!"
 fi

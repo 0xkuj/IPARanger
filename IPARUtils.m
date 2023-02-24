@@ -95,6 +95,16 @@ int spawnedProcessPid;
     return @{@"standardOutput": standardOutputArray, @"errorOutput": errorOutputArray};
 }
 
++ (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip {
+    // Extract the Info.plist file and the icon file from the IPA file using unzip
+    NSTask *task = [[NSTask alloc] init];
+    [task setLaunchPath:@"/usr/bin/unzip"];
+    [task setArguments:@[ipaFilePath, [NSString stringWithFormat:@"Payload/*.app/%@", fileToUnzip]]];
+    task.currentDirectoryPath = directoryPath;
+    [task launch];
+    [task waitUntilExit];
+}
+
 + (void)loginToFile:(NSString *)userEmail {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];

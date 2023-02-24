@@ -1,6 +1,7 @@
 #import <CommonCrypto/CommonDigest.h>
 #pragma clang diagnostic ignored "-Wunused-variable"
 #define IPATOOL_SCRIPT_PATH @"/Applications/IPARanger.app/ipatool/ipatool"
+#define APPINST_SCRIPT_PATH @"/Applications/IPARanger.app/ipatool/appinst"
 #define IPARANGER_DOCUMENTS_LIBRARY @"/var/mobile/Documents/IPARanger/"
 #define IPARANGER_SETTINGS_DICT @"/var/mobile/Documents/IPARanger/com.0xkuj.iparangersettings.plist"
 #define kIPARCountryChangedNotification @"com.0xkuj.iparanger.countryChanged"
@@ -16,6 +17,7 @@
 -(void)launch;
 -(void)setLaunchPath:(id)arg1 ;
 -(void)setStandardInput:(id)arg1 ;
+@property(copy) NSString *currentDirectoryPath;
 @end
 
 typedef void (^AlertActionBlock)(void);
@@ -34,5 +36,6 @@ typedef void (^AlertActionBlock)(void);
 + (NSString *)getMostUpdatedSearchCountryFromFile;
 + (UIImage *)getAppIconFromApple:(NSString *)bundleId;
 + (NSString *)humanReadableSizeForBytes:(long long)bytes;
++ (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip;
 @end
 

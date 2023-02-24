@@ -1,8 +1,9 @@
 Package: com.0xkuj.iparanger
 Name: IPA Ranger
-Version: 0.0.1
+Version: 1.0
 Architecture: iphoneos-arm
-Description: An awesome application!
+Description: GUI Based Application for ipatool
+Depends: ai.akemi.appsyncunified
 Maintainer: 0xkuj
 Author: 0xkuj
 Section: Utilities

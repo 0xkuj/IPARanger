@@ -19,7 +19,7 @@
 @property (nonatomic) BOOL isRefreshing;
 @end
 
-//next thing: account screen / clean code!
+//improve download progress bar, its ugly.
 @implementation IPARDownloadViewController
 - (void)loadView {
     [super loadView];
@@ -90,12 +90,14 @@
     [alert.view addSubview:spinner];
     [self presentViewController:alert animated:YES completion:nil];
 
-    // Dispatch the command to a background queue
+    //Dispatch the command to a background queue
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         [self populateTableWithExistingApps];
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self dismissViewControllerAnimated:YES completion:nil];
-            [self.tableView reloadData];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self dismissViewControllerAnimated:YES completion:nil];
+                [self.tableView reloadData];
+            });
         });
     });
 }
@@ -154,10 +156,52 @@
     //     self.navigationItem.rightBarButtonItems = @[logoutButton, downloadButton];
     //}
     UIMenu* menu = [UIMenu menuWithChildren:@[accountAction, creditsAction, logoutAction]];
-    UIBarButtonItem *optionsButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"ellipsis"] menu:menu];
+    //UIBarButtonItem *optionsButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"ellipsis"] menu:menu];
+    UIBarButtonItem *deleteAllButton = [[UIBarButtonItem alloc] initWithTitle:@"Delete All"
+                                                                  style:UIBarButtonItemStylePlain
+                                                                 target:self
+                                                                 action:@selector(deleteAllButtonTapped)];
+    deleteAllButton.tintColor = [UIColor redColor];      
+    UIFont *font = [UIFont systemFontOfSize:12.0]; // adjust this value as needed
+    NSDictionary *attributes = @{NSFontAttributeName:font};
+    [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
+    [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                      
     UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"square.and.arrow.down.on.square.fill"] style:UIBarButtonItemStylePlain target:self action:@selector(addButtonTapped:)];
-    self.navigationItem.rightBarButtonItems = @[optionsButton, downloadButton];
+    self.navigationItem.rightBarButtonItems = @[deleteAllButton, downloadButton];
 }
+
+- (void)deleteAllButtonTapped {
+    if ([self.existingApps count] <= 0) {
+        return;
+    }
+
+    AlertActionBlock alertConfirmationBlock = ^(void) {
+        NSFileManager *fileManager = [NSFileManager defaultManager];
+        int numOfObjectsToDelete = [[self.existingApps copy] count];
+        for (int i=0; i<numOfObjectsToDelete; i++) {
+            // Delete the file from the data source
+            NSError *error;
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
+            BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, self.existingApps[indexPath.row][@"filename"]] error:&error];
+            if (success == NO) {
+                NSLog(@"Error deleting file: %@", error);
+            } 
+            [self.existingApps removeObjectAtIndex:indexPath.row];
+            [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
+        }
+    };
+
+    AlertActionBlock alertCancelBlock = ^(void) {
+        if (self.tableView.editing) {
+            [self.tableView setEditing:NO animated:YES];
+            [self.tableView reloadData];
+        }
+    };
+
+    NSString *confirmation = @"You are about to all downloaded IPAs\n\nThis operation cannot be undone\nAre you sure?";
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nDelete Files" message:confirmation numberOfActions:2 buttonText:@"YES" alertConfirmationBlock:alertConfirmationBlock alertCancelBlock:alertCancelBlock presentOn:self];
+}
+
 
 - (void)logoutAction {
     [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:[self getAlertBlockForLogout] alertCancelBlock:nil presentOn:self];
@@ -223,7 +267,8 @@
         }
         NSLog(@"omriku bundle? %@, appname: %@", bundleName, appName);
         //need to do that with the command from ealier.. think how you combine those two..
-        UIImage *appImage = [IPARUtils getAppIconFromApple:bundleName];
+        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName]];
+        //UIImage *appImage = nil;//[IPARUtils getAppIconFromApple:bundleName];
         if (appImage == nil) {
             appImage = [UIImage systemImageNamed:@"questionmark.diamond.fill"];
         }
@@ -349,12 +394,17 @@
         [self renameFileAtPath:self.existingApps[indexPath.row][@"filename"]];
         
     }];
+    UIAlertAction *installApplicationAction = [UIAlertAction actionWithTitle:@"Install Application" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+        [self installApplication:self.existingApps[indexPath.row][@"filename"] appName:self.existingApps[indexPath.row][@"appname"]];
+    }];
+
     UIAlertAction *deleteAction = [UIAlertAction actionWithTitle:@"Delete" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
         [self deleteFile:self.existingApps[indexPath.row][@"filename"] index:indexPath];
     }];
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
     
     // Add actions to alert
+    [alert addAction:installApplicationAction];
     [alert addAction:openInFilzaAction];
     [alert addAction:renameAction];
     [alert addAction:shareAction];
@@ -365,6 +415,66 @@
     [self presentViewController:alert animated:YES completion:nil];
 }
 
+- (void)installApplication:(NSString *)ipaFilePath appName:(NSString *)appName {
+    __block NSDictionary *standardAndErrorOutputs = [NSDictionary dictionary];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"IPARanger\nInstallation\n"
+                                                                message:[NSString stringWithFormat:@"\n\n\nInstalling Application '%@'", appName]
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    spinner.center = CGPointMake(130.5, 95);
+    spinner.color = [UIColor grayColor];
+    [spinner startAnimating];
+    [alert.view addSubview:spinner];
+    [self presentViewController:alert animated:YES completion:nil];
+
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+       standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ %@%@", APPINST_SCRIPT_PATH, IPARANGER_DOCUMENTS_LIBRARY, ipaFilePath]];
+        //Successfully installed
+        for (NSString *obj in standardAndErrorOutputs[@"standardOutput"]) {
+            if ([obj containsString:@"Successfully installed"]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self dismissViewControllerAnimated:YES completion:^{
+                        [IPARUtils presentMessageWithTitle:@"IPARanger\nSuccess!" message:[NSString stringWithFormat:@"Successfully installed '%@'!", appName] numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
+                    }];
+                    return;
+                });
+            } 
+        }
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+                [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:[NSString stringWithFormat:@"Error occurred while trying to install '%@'", appName] numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
+            }];
+        });
+    });
+
+}
+
+- (UIImage *)getAppIconFromIPAFile:(NSString *)ipaFilePath {
+    NSString *tempDir = [NSString stringWithFormat:@"%@tmp/", IPARANGER_DOCUMENTS_LIBRARY];
+    [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
+    [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:@"Info.plist"];
+
+    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@Payload/", tempDir]];
+    NSString *appFolder = standardAndErrorOutputs[@"standardOutput"][0];
+    [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/Info.plist %@", tempDir, appFolder, tempDir]];
+
+    // Read the Info.plist file to get the name of the icon file
+    NSString *infoPlistPath = [tempDir stringByAppendingPathComponent:@"Info.plist"];
+    NSDictionary *infoPlist = [NSDictionary dictionaryWithContentsOfFile:infoPlistPath];
+    NSString *iconFileName = infoPlist[@"CFBundleIcons"][@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"][0];
+
+    [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
+    [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/%@@2x.png %@", tempDir, appFolder, iconFileName, tempDir]];
+
+    // Read the icon file and create a UIImage
+    NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
+    NSData *iconData = [NSData dataWithContentsOfFile:iconFilePath];
+    UIImage *iconImage = [UIImage imageWithData:iconData];
+    [[NSFileManager defaultManager] removeItemAtPath:tempDir error:nil];
+    
+    return iconImage;
+}
 
 - (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
     UIContextualAction *deleteAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive title:@"Delete" handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
