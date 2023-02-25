@@ -55,6 +55,8 @@
                                     repeats:NO];
 
     [self.view addSubview:textView];
+    [textView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16].active = YES;
+    [textView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 }
 
 /* provides the animation */
@@ -80,11 +82,10 @@
 
     // CAGradientLayer *gradientLayer = [CAGradientLayer layer];
     // gradientLayer.frame = self.view.bounds;
-    gradientLayer.colors = @[(id)[UIColor colorWithRed:0.13 green:0.35 blue:0.63 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:0.81 green:0.31 blue:0.35 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:0.95 green:0.64 blue:0.32 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:1.0 green:0.86 blue:0.54 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:1.0 green:0.94 blue:0.85 alpha:1.0].CGColor];
+    gradientLayer.colors = @[(id)[UIColor colorWithRed:13/255.0 green:23/255.0 blue:33/255.0 alpha:1.0].CGColor,
+                             (id)[UIColor colorWithRed:27/255.0 green:40/255.0 blue:56/255.0 alpha:1.0].CGColor,
+                             (id)[UIColor colorWithRed:40/255.0 green:57/255.0 blue:78/255.0 alpha:1.0].CGColor,
+                             (id)[UIColor colorWithRed:50/255.0 green:72/255.0 blue:98/255.0 alpha:1.0].CGColor];
     gradientLayer.startPoint = CGPointMake(0.5, 0.0);
     gradientLayer.endPoint = CGPointMake(0.5, 1.0);
     [self.view.layer insertSublayer:gradientLayer atIndex:0];
@@ -267,7 +268,7 @@
     for (id obj in self.linesStandardOutput) {
         NSLog(@"omriku line output :%@", obj);
         if ([obj containsString:@"Authenticated as"]) {
-            [self authToFile];
+            [self authToFile:obj];
             [self setTabNavigation];
             return YES;
         }
@@ -275,8 +276,8 @@
     return NO;
 }
 
-- (void)authToFile {
-    [IPARUtils loginToFile:self.emailTextField.text];
+- (void)authToFile:(NSString *)authNameFromOutput {
+    [IPARUtils loginToFile:self.emailTextField.text authNameFromOutput:authNameFromOutput];
 }
 
 - (void)setTabNavigation {

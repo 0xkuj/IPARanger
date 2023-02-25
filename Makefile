@@ -8,6 +8,7 @@ APPLICATION_NAME = IPARanger
 IPARanger_FILES = main.m $(wildcard IPAR*.m)
 IPARanger_FRAMEWORKS = UIKit CoreGraphics
 IPARanger_PRIVATE_FRAMEWORKS = Preferences
+IPARanger_LIBRARIES = archive
 IPARanger_CFLAGS = -fobjc-arc
 IPARanger_CODESIGN_FLAGS = -Sentitlements.plist
 

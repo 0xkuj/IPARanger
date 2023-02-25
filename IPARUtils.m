@@ -105,13 +105,29 @@ int spawnedProcessPid;
     [task waitUntilExit];
 }
 
-+ (void)loginToFile:(NSString *)userEmail {
++ (void)loginToFile:(NSString *)userEmail authNameFromOutput:(NSString *)authNameFromOutput {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
     settings[@"Authenticated"] = @YES;
     settings[@"AccountEmail"] = userEmail;
+    settings[@"AccountName"] = [self parseLoginNameFromAuthString:authNameFromOutput];
     settings[@"lastLoginDate"] = [NSDate date];
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
+}
+
++ (NSString *)parseLoginNameFromAuthString:(NSString *)authString {
+    // Create the regular expression pattern
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"'([^']*)'" options:NSRegularExpressionCaseInsensitive error:nil];
+
+    // Search the input string for matches to the pattern
+    NSArray *matches = [regex matchesInString:authString options:0 range:NSMakeRange(0, authString.length)];
+
+    // Extract the matched strings between single quotes
+    for (NSTextCheckingResult *match in matches) {
+        NSRange matchRange = [match rangeAtIndex:1];
+        return [authString substringWithRange:matchRange];
+    }
+    return @"Unkown";
 }
 
 + (void)logoutToFile {
@@ -134,7 +150,19 @@ int spawnedProcessPid;
 + (NSString *)getMostUpdatedDownloadCountryFromFile {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
-    return settings[@"AccountCountryDownload"];
+    return settings[@"AccountCountryDownload"] ? settings[@"AccountCountryDownload"] : @"US";
+}
+
++ (NSString *)getMostUpdateLoginDate {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    return settings[@"lastLoginDate"];
+}
+
++ (NSString *)getMostUpdatedSearchCountryFromFile {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    return settings[@"AccountCountrySearch"] ? settings[@"AccountCountrySearch"] : @"US";
 }
 
 + (void)searchCountryToFile:(NSString *)accountCountry {
@@ -143,12 +171,6 @@ int spawnedProcessPid;
     settings[@"AccountCountrySearch"] = accountCountry;
     [settings writeToFile:IPARANGER_SETTINGS_DICT atomically:YES];
     [[NSNotificationCenter defaultCenter] postNotificationName:kIPARCountryChangedNotification object:nil];
-}
-
-+ (NSString *)getMostUpdatedSearchCountryFromFile {
-    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
-    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
-    return settings[@"AccountCountrySearch"];
 }
 
 //+ (void)cancelScript:(int)pid {

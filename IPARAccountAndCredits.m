@@ -1,51 +1,236 @@
 #import "IPARAccountAndCredits.h"
+#import "IPARUtils.h"
+#import "IPARLoginScreenViewController.h"
 // Define constants for padding between views
 // static CGFloat const kVerticalPadding = 20.0;
 // static CGFloat const kHorizontalPadding = 16.0;
 
 @interface IPARAccountAndCredits ()
 @property (nonatomic, strong) UIImageView *imageView;
-@property (nonatomic, strong) UILabel *nameLabel;
+@property (nonatomic, strong) UILabel *accountNameLabel;
 @property (nonatomic, strong) UILabel *emailLabel;
-@property (nonatomic, strong) UILabel *label2;
-@property (nonatomic, strong) UILabel *label3;
-@property (nonatomic, strong) UITextView *textView;
+@property (nonatomic, strong) UILabel *searchCountryLabel;
+@property (nonatomic, strong) UILabel *downloadCountryLabel;
+@property (nonatomic, strong) UILabel *creditsLabel;
+@property (nonatomic, strong) UILabel *lastLoginDate;
+@property (nonatomic, strong) UIButton *logoutButton;
 @property (nonatomic, strong) UIImageView *headerImageView;
-@property (nonatomic, strong) UILabel *headerLabel;
 @end
 
 @implementation IPARAccountAndCredits
 
 - (void)loadView {
     [super loadView];
-    
     // Initialize the header view
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, [[UIScreen mainScreen] bounds].size.height)];
     self.headerImageView = [[UIImageView alloc] initWithFrame:CGRectMake(155,120 , 80, 80)];
     UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:40.0];
     self.headerImageView.image = [UIImage systemImageNamed:@"person.crop.circle" withConfiguration:config];
+    self.headerImageView.translatesAutoresizingMaskIntoConstraints = NO;
     //self.headerImageView.center = headerView.center;
-    CAGradientLayer *gradientLayer = [CAGradientLayer layer];
-    gradientLayer.frame = CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, headerView.frame.size.height);
+    // CAGradientLayer *gradientLayer = [CAGradientLayer layer];
+    // gradientLayer.frame = CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, headerView.frame.size.height);
     // UIColor *lightBlue = [UIColor colorWithRed:0.15 green:0.1 blue:0.65 alpha:1.0];
     // UIColor *lightPurple = [UIColor colorWithRed:0.5 green:0.4 blue:0.2 alpha:1.0];
 
     // CAGradientLayer *gradientLayer = [CAGradientLayer layer];
     // gradientLayer.frame = self.view.bounds;
-    gradientLayer.colors = @[(id)[UIColor colorWithRed:0.13 green:0.35 blue:0.63 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:0.81 green:0.31 blue:0.35 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:0.95 green:0.64 blue:0.32 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:1.0 green:0.86 blue:0.54 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:1.0 green:0.94 blue:0.85 alpha:1.0].CGColor];
+    // gradientLayer.colors = @[(id)[UIColor colorWithRed:13/255.0 green:23/255.0 blue:33/255.0 alpha:1.0].CGColor,
+    //                          (id)[UIColor colorWithRed:27/255.0 green:40/255.0 blue:56/255.0 alpha:1.0].CGColor,
+    //                          (id)[UIColor colorWithRed:40/255.0 green:57/255.0 blue:78/255.0 alpha:1.0].CGColor,
+    //                          (id)[UIColor colorWithRed:50/255.0 green:72/255.0 blue:98/255.0 alpha:1.0].CGColor];
+    // gradientLayer.startPoint = CGPointMake(0.5, 0.0);
+    // gradientLayer.endPoint = CGPointMake(0.5, 1.0);
+    // [headerView.layer insertSublayer:gradientLayer atIndex:0];
+    CAGradientLayer *gradientLayer = [CAGradientLayer layer];
+    gradientLayer.frame = self.view.bounds;
+    gradientLayer.colors = @[(id)[UIColor colorWithRed:58/255.0 green:97/255.0 blue:156/255.0 alpha:1.0].CGColor, (id)[UIColor colorWithRed:19/255.0 green:39/255.0 blue:70/255.0 alpha:1.0].CGColor];
+    gradientLayer.locations = @[@0.0, @1.0];
     gradientLayer.startPoint = CGPointMake(0.5, 0.0);
     gradientLayer.endPoint = CGPointMake(0.5, 1.0);
     [headerView.layer insertSublayer:gradientLayer atIndex:0];
+
+    //headerView.backgroundColor =  UIColor.systemBackgroundColor;
     [self.view addSubview:headerView];
-    self.headerLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, headerView.frame.size.width, headerView.frame.size.height)];
-    self.headerLabel.text = @"Header Text";
-    self.headerLabel.textAlignment = NSTextAlignmentCenter;
-    [self.view addSubview:self.headerLabel];
     [self.view addSubview:self.headerImageView];
+    [self.headerImageView.centerXAnchor constraintEqualToAnchor:headerView.centerXAnchor].active = YES;
+    [self.headerImageView.topAnchor constraintEqualToAnchor:headerView.safeAreaLayoutGuide.topAnchor constant:16].active = YES;
+
+    self.accountNameLabel = [[UILabel alloc] init];
+    self.accountNameLabel.text = @"Y S";
+    self.accountNameLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:self.accountNameLabel];
+    [self.accountNameLabel.topAnchor constraintEqualToAnchor:self.headerImageView.bottomAnchor constant:16].active = YES;
+    [self.accountNameLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    self.emailLabel = [[UILabel alloc] init];
+    self.emailLabel.text = @"illusionaryx@gmail.com";
+    self.emailLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:self.emailLabel];
+    [self.emailLabel.topAnchor constraintEqualToAnchor:self.accountNameLabel.bottomAnchor constant:8].active = YES;
+    [self.emailLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    self.logoutButton = [[UIButton alloc] init];
+    [self.logoutButton setTitle:@"➡️ Logout ➡️" forState:UIControlStateNormal];
+    self.logoutButton.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.logoutButton.titleLabel setFont:[UIFont systemFontOfSize:24.0 weight:UIFontWeightBold]];
+    [self.logoutButton setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
+    [self.logoutButton addTarget:self action:@selector(handleLogout) forControlEvents:UIControlEventTouchUpInside];
+    [self.view addSubview:self.logoutButton];
+    [self.logoutButton.topAnchor constraintEqualToAnchor:self.emailLabel.bottomAnchor constant:24].active = YES;
+    [self.logoutButton.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    self.lastLoginDate = [[UILabel alloc] init];
+    self.lastLoginDate.text = [NSString stringWithFormat:@"Login Date: %@", [IPARUtils getMostUpdateLoginDate]];
+    self.lastLoginDate.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:self.lastLoginDate];
+    [self.lastLoginDate.topAnchor constraintEqualToAnchor:self.emailLabel.bottomAnchor constant:96].active = YES;
+    [self.lastLoginDate.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
+
+    self.searchCountryLabel = [[UILabel alloc] init];
+    NSString *searchCountry = [IPARUtils getMostUpdatedSearchCountryFromFile];
+    self.searchCountryLabel.text = [NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry];
+    self.searchCountryLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:self.searchCountryLabel];
+    [self.searchCountryLabel.topAnchor constraintEqualToAnchor:self.lastLoginDate.bottomAnchor constant:16].active = YES;
+    [self.searchCountryLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
+    
+    self.downloadCountryLabel = [[UILabel alloc] init];
+    NSString *downloadCountry = [IPARUtils getMostUpdatedDownloadCountryFromFile];
+    self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:[IPARUtils getMostUpdatedDownloadCountryFromFile]], downloadCountry];
+    self.downloadCountryLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:self.downloadCountryLabel];
+    [self.downloadCountryLabel.topAnchor constraintEqualToAnchor:self.searchCountryLabel.bottomAnchor constant:16].active = YES;
+    [self.downloadCountryLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
+
+
+    UILabel *createdByLabel = [[UILabel alloc] init];
+    createdByLabel.text = @"Created by 0xkuj";
+    createdByLabel.font = [UIFont boldSystemFontOfSize:24];
+    createdByLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:createdByLabel];
+    [createdByLabel.topAnchor constraintEqualToAnchor:self.downloadCountryLabel.bottomAnchor constant:32].active = YES;
+    [createdByLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    UIButton *followMeTwitter = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 150, 50)];
+    [followMeTwitter setTitle:@"Follow Me On Twitter" forState:UIControlStateNormal];
+    [followMeTwitter setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
+    followMeTwitter.titleLabel.font = [UIFont systemFontOfSize:16.0];
+    [followMeTwitter sizeToFit]; // resize button to fit title
+    [followMeTwitter setImage:[UIImage imageNamed:@"Twitter@2x.png"] forState:UIControlStateNormal];
+    [followMeTwitter addTarget:self action:@selector(openTW) forControlEvents:UIControlEventTouchUpInside];
+     followMeTwitter.translatesAutoresizingMaskIntoConstraints = NO;
+    [followMeTwitter setImageEdgeInsets:UIEdgeInsetsMake(0, -10, 0, 0)]; // shift image left by 10 points
+    [followMeTwitter setTitleEdgeInsets:UIEdgeInsetsMake(0, 0, 0, 0)]; // shift text right by 10 points
+    [self.view addSubview:followMeTwitter];
+    [followMeTwitter.topAnchor constraintEqualToAnchor:createdByLabel.bottomAnchor constant:16].active = YES;
+    [followMeTwitter.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    UIButton *buyMeCoffeePP = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 300, 50)];
+    [buyMeCoffeePP setTitle:@"Buy me a coffee" forState:UIControlStateNormal];
+    [buyMeCoffeePP setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
+    buyMeCoffeePP.titleLabel.font = [UIFont systemFontOfSize:16.0];
+    [buyMeCoffeePP sizeToFit]; // resize button to fit title
+    [buyMeCoffeePP setImage:[UIImage imageNamed:@"donate@2x.png"] forState:UIControlStateNormal];
+    [buyMeCoffeePP addTarget:self action:@selector(openPP) forControlEvents:UIControlEventTouchUpInside];
+    buyMeCoffeePP.translatesAutoresizingMaskIntoConstraints = NO;
+    [buyMeCoffeePP setImageEdgeInsets:UIEdgeInsetsMake(0, -10, 0, 0)]; // shift image left by 10 points
+    [buyMeCoffeePP setTitleEdgeInsets:UIEdgeInsetsMake(0, 0, 0, 0)]; // shift text right by 10 points
+    buyMeCoffeePP.titleLabel.lineBreakMode = NSLineBreakByTruncatingTail; 
+    [self.view addSubview:buyMeCoffeePP];
+    [buyMeCoffeePP.topAnchor constraintEqualToAnchor:followMeTwitter.bottomAnchor constant:16].active = YES;
+    [buyMeCoffeePP.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    UIButton *followMeGithub = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 150, 50)];
+    [followMeGithub setTitle:@"My GitHub" forState:UIControlStateNormal];
+    [followMeGithub setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
+    followMeGithub.titleLabel.font = [UIFont systemFontOfSize:16.0];
+    [followMeGithub sizeToFit]; // resize button to fit title
+    [followMeGithub setImage:[UIImage imageNamed:@"GitHub@2x.png"] forState:UIControlStateNormal];
+    [followMeGithub addTarget:self action:@selector(openGithub) forControlEvents:UIControlEventTouchUpInside];
+    followMeGithub.translatesAutoresizingMaskIntoConstraints = NO;
+    [followMeGithub setImageEdgeInsets:UIEdgeInsetsMake(0, -10, 0, 0)]; // shift image left by 10 points
+    [followMeGithub setTitleEdgeInsets:UIEdgeInsetsMake(0, 0, 0, 0)]; // shift text right by 10 points
+    [self.view addSubview:followMeGithub];
+    [followMeGithub.topAnchor constraintEqualToAnchor:buyMeCoffeePP.bottomAnchor constant:16].active = YES;
+    [followMeGithub.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    UILabel *credits = [[UILabel alloc] init];
+    credits.text = @"Special Thanks";
+    credits.font = [UIFont boldSystemFontOfSize:24];
+    credits.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:credits];
+    [credits.topAnchor constraintEqualToAnchor:buyMeCoffeePP.bottomAnchor constant:64].active = YES;
+    [credits.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    UILabel *majdLabel = [[UILabel alloc] init];
+    majdLabel.text = @"Majd Alfhaily (ipatool)";
+    majdLabel.font = [UIFont boldSystemFontOfSize:14.0];
+    majdLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:majdLabel];
+    [majdLabel.topAnchor constraintEqualToAnchor:credits.bottomAnchor constant:8].active = YES;
+    [majdLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    UILabel *angelXwindLabel = [[UILabel alloc] init];
+    angelXwindLabel.text = @"angelXwind (appinst)";
+    angelXwindLabel.font = [UIFont boldSystemFontOfSize:14.0];
+    angelXwindLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    [self.view addSubview:angelXwindLabel];
+    [angelXwindLabel.topAnchor constraintEqualToAnchor:majdLabel.bottomAnchor constant:8].active = YES;
+    [angelXwindLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
 }
+
+- (void)updateCountry {
+    NSString *searchCountry = [IPARUtils getMostUpdatedSearchCountryFromFile];
+    self.searchCountryLabel.text = [NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry];
+    NSString *downloadCountry = [IPARUtils getMostUpdatedDownloadCountryFromFile];
+    self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:[IPARUtils getMostUpdatedDownloadCountryFromFile]], downloadCountry];
+}
+
+- (void)handleLogout {
+    NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", IPATOOL_SCRIPT_PATH]];
+    if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
+    {
+        [self logoutAction];
+    }
+}
+
+- (void)logoutAction {
+    AlertActionBlock alertBlock = ^(void) {
+        NSLog(@"omriku logout ok!");
+        IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
+        // Step 1: Pop all view controllers from the navigation stack
+        [self.navigationController popToRootViewControllerAnimated:NO];
+        // Step 2: Remove the tabbarcontroller from the window's rootViewController
+        [self.tabBarController.view removeFromSuperview];
+        // Step 3: Instantiate your login screen view controller and set it as the new rootViewController of the window
+        UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
+        UIWindow *window = UIApplication.sharedApplication.delegate.window;
+        window.rootViewController = navController;
+        [IPARUtils logoutToFile];  
+    };
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:alertBlock alertCancelBlock:nil presentOn:self];
+}
+
+-(void)openTW {
+	UIApplication *application = [UIApplication sharedApplication];
+	NSURL *URL = [NSURL URLWithString:@"https://www.twitter.com/omrkujman"];
+	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+}
+
+-(void)openPP {
+	UIApplication *application = [UIApplication sharedApplication];
+	NSURL *URL = [NSURL URLWithString:@"https://www.paypal.me/0xkuj"];
+	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+}
+
+-(void)openGithub {
+	UIApplication *application = [UIApplication sharedApplication];
+	NSURL *URL = [NSURL URLWithString:@"https://github.com/0xkuj"];
+	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+}
+
 @end
 

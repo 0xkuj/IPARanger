@@ -26,7 +26,7 @@ typedef void (^AlertActionBlock)(void);
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command;
 + (void)presentMessageWithTitle:(NSString *)title message:(NSString *)message numberOfActions:(NSUInteger)numberOfActions buttonText:(NSString *)buttonText alertConfirmationBlock:(AlertActionBlock)confirmationBlock alertCancelBlock:(AlertActionBlock)cancelBlock presentOn:(id)viewController;
 + (NSString *)sha256ForFileAtPath:(NSString *)filePath;
-+ (void)loginToFile:(NSString *)userEmail;
++ (void)loginToFile:(NSString *)userEmail authNameFromOutput:(NSString *)authNameFromOutput;
 + (void)logoutToFile;
 + (void)cancelScript;
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode;
@@ -37,5 +37,6 @@ typedef void (^AlertActionBlock)(void);
 + (UIImage *)getAppIconFromApple:(NSString *)bundleId;
 + (NSString *)humanReadableSizeForBytes:(long long)bytes;
 + (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip;
++ (NSString *)getMostUpdateLoginDate;
 @end
 

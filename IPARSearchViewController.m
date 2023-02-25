@@ -78,65 +78,8 @@
 
 - (void)_setUpNavigationBar
 {
-	UIAction *accountAction = [UIAction actionWithTitle:@"Account" image:[UIImage systemImageNamed:@"person.crop.circle"] identifier:@"IPARangerAccount" handler:^(__kindof UIAction *action)
-	{
-		dispatch_async(dispatch_get_main_queue(), ^
-		{
-
-		});
-	}];
-
-	UIAction *creditsAction = [UIAction actionWithTitle:@"Credits" image:[UIImage systemImageNamed:@"info.circle.fill"] identifier:@"IPARangerCredits" handler:^(__kindof UIAction *action)
-	{
-		dispatch_async(dispatch_get_main_queue(), ^
-		{
-
-		});
-	}];
-
-	UIAction *logoutAction = [UIAction actionWithTitle:@"Logout" image:[UIImage systemImageNamed:@"arrow.right"] identifier:@"IPARangerLogout" handler:^(__kindof UIAction *action)
-	{
-        // self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
-        NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", IPATOOL_SCRIPT_PATH]];
-        for (NSString *string in didLogoutOK[@"errorOutput"]) {
-            NSLog(@"omriku print string: %@", string);
-        }
-        if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
-        {
-            [self logoutAction];
-        }
-	}];
-
-    //if (@available(iOS 14, *)) {
-        // UIBarButtonItem *logoutButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"arrow.right"] style:UIBarButtonItemStylePlain target:self action:@selector(logoutAction)];
-        // UIBarButtonItem *lookupButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"magnifyingglass"] style:UIBarButtonItemStylePlain target:self action:@selector(searchButtonTapped:)];
-        // self.navigationItem.rightBarButtonItems = @[logoutButton, lookupButton];
-    //}
-    UIMenu* menu = [UIMenu menuWithChildren:@[accountAction, creditsAction, logoutAction]];
-    UIBarButtonItem *optionsButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"ellipsis"] menu:menu];
     UIBarButtonItem *lookupButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"magnifyingglass"] style:UIBarButtonItemStylePlain target:self action:@selector(searchButtonTapped:)];
-    self.navigationItem.rightBarButtonItems = @[optionsButton, lookupButton];
-}
-
-- (void)logoutAction {
-    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:[self getAlertBlockForLogout] alertCancelBlock:nil presentOn:self];
-}
-
-- (AlertActionBlock)getAlertBlockForLogout {  
-    AlertActionBlock alertBlock = ^(void) {
-        NSLog(@"omriku logout ok!");
-        IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
-        // Step 1: Pop all view controllers from the navigation stack
-        [self.navigationController popToRootViewControllerAnimated:NO];
-        // Step 2: Remove the tabbarcontroller from the window's rootViewController
-        [self.tabBarController.view removeFromSuperview];
-        // Step 3: Instantiate your login screen view controller and set it as the new rootViewController of the window
-        UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
-        UIWindow *window = UIApplication.sharedApplication.delegate.window;
-        window.rootViewController = navController;
-        [IPARUtils logoutToFile];  
-    };
-    return alertBlock;
+    self.navigationItem.rightBarButtonItems = @[lookupButton];
 }
 
 - (void)searchButtonTapped:(id)sender {

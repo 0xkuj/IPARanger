@@ -3,6 +3,9 @@
 #import "IPARCountryTableViewController.h"
 #import "IPARUtils.h"
 #import "IPARAppDownloadedCell.h"
+#import <libarchive/archive.h>
+#import <libarchive/archive_entry.h>
+#pragma clang diagnostic ignored "-Wimplicit-function-declaration"
 
 @interface IPARDownloadViewController ()
 @property (nonatomic, strong) NSMutableArray *existingApps;
@@ -24,6 +27,7 @@
 @implementation IPARDownloadViewController
 - (void)loadView {
     [super loadView];
+    //size_t read = archive_read_data(_archive, buf, size);
     _isRefreshing = NO;
     _existingApps = [NSMutableArray array];
     _currentPrecentageDownload = [NSString string];
@@ -94,7 +98,7 @@
     //Dispatch the command to a background queue
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         [self populateTableWithExistingApps];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self dismissViewControllerAnimated:YES completion:nil];
                 [self.tableView reloadData];
@@ -125,39 +129,6 @@
 
 - (void)_setUpNavigationBar2
 {
-	UIAction *accountAction = [UIAction actionWithTitle:@"Account" image:[UIImage systemImageNamed:@"person.crop.circle"] identifier:@"IPARangerAccount" handler:^(__kindof UIAction *action)
-	{
-		dispatch_async(dispatch_get_main_queue(), ^
-		{
-
-		});
-	}];
-
-	UIAction *creditsAction = [UIAction actionWithTitle:@"Credits" image:[UIImage systemImageNamed:@"info.circle.fill"] identifier:@"IPARangerCredits" handler:^(__kindof UIAction *action)
-	{
-		dispatch_async(dispatch_get_main_queue(), ^
-		{
-
-		});
-	}];
-
-	UIAction *logoutAction = [UIAction actionWithTitle:@"Logout" image:[UIImage systemImageNamed:@"arrow.right"] identifier:@"IPARangerLogout" handler:^(__kindof UIAction *action)
-	{
-        // self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
-        NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", IPATOOL_SCRIPT_PATH]];
-        if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
-        {
-            [self logoutAction];
-        }
-	}];
-
-    // if (@available(iOS 14, *)) {
-    //     UIBarButtonItem *logoutButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"arrow.right"] style:UIBarButtonItemStylePlain target:self action:@selector(logoutAction)];
-    //     UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"square.and.arrow.down.on.square.fill"] style:UIBarButtonItemStylePlain target:self action:@selector(addButtonTapped:)];
-    //     self.navigationItem.rightBarButtonItems = @[logoutButton, downloadButton];
-    //}
-    UIMenu* menu = [UIMenu menuWithChildren:@[accountAction, creditsAction, logoutAction]];
-    //UIBarButtonItem *optionsButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"ellipsis"] menu:menu];
     UIBarButtonItem *deleteAllButton = [[UIBarButtonItem alloc] initWithTitle:@"Delete All"
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
@@ -242,6 +213,8 @@
 
     // Get the size of each "ipa" file
     [self.existingApps removeAllObjects];
+    //maybe for later usage.
+    //NSArray *bundlesThatExists = [self retrieveBundlesInTmpFolder];
     for (NSString *fileName in ipaFiles) {
         NSLog(@"omriku checking file: %@", fileName);
         NSString *filePath = [IPARANGER_DOCUMENTS_LIBRARY stringByAppendingPathComponent:fileName];
@@ -255,7 +228,8 @@
         NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName];
         // Load the Info.plist file from the IPA file
         NSString *str = @"\"%s (%s)\\n\"";
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p %@ Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(Name|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
+        //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p '%@' Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(Name|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
         NSString *appName = [NSString string];
         NSString *bundleName = [NSString string];
         if ([standardAndErrorOutputs[@"standardOutput"][0] containsString:@"CFBundleName"]) {
@@ -267,8 +241,13 @@
         }
         NSLog(@"omriku bundle? %@, appname: %@", bundleName, appName);
         //need to do that with the command from ealier.. think how you combine those two..
-        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName]];
-        //UIImage *appImage = nil;//[IPARUtils getAppIconFromApple:bundleName];
+        // Check if the directory already exists
+        NSString *tempDir = [NSString stringWithFormat:@"%@tmp/%@/", IPARANGER_DOCUMENTS_LIBRARY, bundleName];
+        if ([fileManager fileExistsAtPath:tempDir] == NO) {
+            // Create the directory if it doesn't exist
+            [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
+        }
+        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName] bundleId:bundleName tempDir:tempDir];
         if (appImage == nil) {
             appImage = [UIImage systemImageNamed:@"questionmark.diamond.fill"];
         }
@@ -344,14 +323,17 @@
     if (cell == nil) {
         cell = [[IPARAppDownloadedCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"IPARAppDownloadedCell"];
     }
-    UIView *selectionView = [UIView new];
-    selectionView.backgroundColor = UIColor.clearColor;
-    [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
-    cell.backgroundColor = UIColor.clearColor;
-    cell.appName.text = self.existingApps[indexPath.row][@"appname"];
-    cell.appFilename.text = self.existingApps[indexPath.row][@"filename"];
-    cell.appSize.text = [NSString stringWithFormat:@"%@", self.existingApps[indexPath.row][@"size"]];
-    cell.appImage.image = self.existingApps[indexPath.row][@"appimage"];
+    if (indexPath.row < self.existingApps.count) {
+        UIView *selectionView = [UIView new];
+        selectionView.backgroundColor = UIColor.clearColor;
+        [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
+        cell.backgroundColor = UIColor.clearColor;
+        cell.appName.text = self.existingApps[indexPath.row][@"appname"];
+        cell.appFilename.text = self.existingApps[indexPath.row][@"filename"];
+        cell.appSize.text = [NSString stringWithFormat:@"%@", self.existingApps[indexPath.row][@"size"]];
+        cell.appImage.image = self.existingApps[indexPath.row][@"appimage"];         
+    }
+
     return cell;
 	// static NSString *CellIdentifier = @"Cell";
 	// UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
@@ -416,62 +398,85 @@
 }
 
 - (void)installApplication:(NSString *)ipaFilePath appName:(NSString *)appName {
-    __block NSDictionary *standardAndErrorOutputs = [NSDictionary dictionary];
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"IPARanger\nInstallation\n"
-                                                                message:[NSString stringWithFormat:@"\n\n\nInstalling Application '%@'", appName]
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    spinner.center = CGPointMake(130.5, 95);
-    spinner.color = [UIColor grayColor];
-    [spinner startAnimating];
-    [alert.view addSubview:spinner];
-    [self presentViewController:alert animated:YES completion:nil];
-
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-       standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ %@%@", APPINST_SCRIPT_PATH, IPARANGER_DOCUMENTS_LIBRARY, ipaFilePath]];
-        //Successfully installed
-        for (NSString *obj in standardAndErrorOutputs[@"standardOutput"]) {
-            if ([obj containsString:@"Successfully installed"]) {
-                dispatch_async(dispatch_get_main_queue(), ^{
+    AlertActionBlock alertConfirmationBlock = ^(void) { 
+        __block NSDictionary *standardAndErrorOutputs = [NSDictionary dictionary];
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"IPARanger\nInstallation\n"
+                                                                    message:[NSString stringWithFormat:@"\n\n\nInstalling Application '%@'", appName]
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+        spinner.center = CGPointMake(130.5, 95);
+        spinner.color = [UIColor grayColor];
+        [spinner startAnimating];
+        [alert.view addSubview:spinner];
+        [self presentViewController:alert animated:YES completion:nil]; 
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ %@%@", APPINST_SCRIPT_PATH, IPARANGER_DOCUMENTS_LIBRARY, ipaFilePath]];
+            //Successfully installed
+            for (NSString *obj in standardAndErrorOutputs[@"standardOutput"]) {
+                if ([obj containsString:@"Successfully installed"]) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [self dismissViewControllerAnimated:YES completion:^{
+                            [IPARUtils presentMessageWithTitle:@"IPARanger\nSuccess!" message:[NSString stringWithFormat:@"Successfully installed '%@'!", appName] numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
+                        }];
+                        return;
+                    });
+                } 
+            }   
+            dispatch_async(dispatch_get_main_queue(), ^{
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nSuccess!" message:[NSString stringWithFormat:@"Successfully installed '%@'!", appName] numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
-                    }];
-                    return;
-                });
-            } 
-        }
-
-        dispatch_async(dispatch_get_main_queue(), ^{
-                [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:[NSString stringWithFormat:@"Error occurred while trying to install '%@'", appName] numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
-            }];
+                    [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:[NSString stringWithFormat:@"Error occurred while trying to install '%@'", appName] numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
+                }];
+            });
         });
-    });
+    };
 
+    NSString *confirmation = [NSString stringWithFormat:@"You are about to install App: %@\n\nAre you sure?", appName];
+    [IPARUtils presentMessageWithTitle:@"IPARanger\nInstall Application" message:confirmation numberOfActions:2 buttonText:@"Yes, Continue" alertConfirmationBlock:alertConfirmationBlock alertCancelBlock:nil presentOn:self];
 }
 
-- (UIImage *)getAppIconFromIPAFile:(NSString *)ipaFilePath {
-    NSString *tempDir = [NSString stringWithFormat:@"%@tmp/", IPARANGER_DOCUMENTS_LIBRARY];
-    [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
-    [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:@"Info.plist"];
+- (NSArray *)retrieveBundlesInTmpFolder {
+    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@tmp/", IPARANGER_DOCUMENTS_LIBRARY]];
+    NSMutableArray *bundles = [NSMutableArray array];
+    for (NSString *bundle in standardAndErrorOutputs[@"standardOutput"]) {
+        if ([bundle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length > 0) {
+            NSLog(@"omriku adding bundle %@", bundle);
+            [bundles addObject:bundle];
+        }   
+    }
+    return bundles;
+}
 
-    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@Payload/", tempDir]];
-    NSString *appFolder = standardAndErrorOutputs[@"standardOutput"][0];
-    [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/Info.plist %@", tempDir, appFolder, tempDir]];
-
+- (UIImage *)getAppIconFromIPAFile:(NSString *)ipaFilePath bundleId:(NSString *)bundleName tempDir:(NSString *)tempDir {
+    // Check if the file exists
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@Info.plist",tempDir]]) {
+        NSLog(@"omriku file already exist.. %@", [NSString stringWithFormat:@"%@Info.plist",tempDir]);
+    } else {
+        [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:@"Info.plist"];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@Payload/", tempDir]];
+        NSString *appFolder = standardAndErrorOutputs[@"standardOutput"][0];
+        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/Info.plist %@", tempDir, appFolder, tempDir]];
+    }
+    
     // Read the Info.plist file to get the name of the icon file
     NSString *infoPlistPath = [tempDir stringByAppendingPathComponent:@"Info.plist"];
     NSDictionary *infoPlist = [NSDictionary dictionaryWithContentsOfFile:infoPlistPath];
     NSString *iconFileName = infoPlist[@"CFBundleIcons"][@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"][0];
 
-    [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
-    [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/%@@2x.png %@", tempDir, appFolder, iconFileName, tempDir]];
+    if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@%@@2x.png", tempDir, iconFileName]]) {
+        NSLog(@"omriku file already exist.. %@", [NSString stringWithFormat:@"%@%@@2x.png", tempDir, iconFileName]);
+    } else {
+        [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@Payload/", tempDir]];
+        NSString *appFolder = standardAndErrorOutputs[@"standardOutput"][0];
+        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/%@@2x.png %@", tempDir, appFolder, iconFileName, tempDir]];
+    }
 
     // Read the icon file and create a UIImage
     NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
     NSData *iconData = [NSData dataWithContentsOfFile:iconFilePath];
     UIImage *iconImage = [UIImage imageWithData:iconData];
-    [[NSFileManager defaultManager] removeItemAtPath:tempDir error:nil];
+    [[NSFileManager defaultManager] removeItemAtPath:[NSString stringWithFormat:@"%@/Payload", tempDir] error:nil];
     
     return iconImage;
 }
