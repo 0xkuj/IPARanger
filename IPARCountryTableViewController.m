@@ -7,14 +7,17 @@
 @property (nonatomic) NSArray *filteredCountries;
 @property (nonatomic) NSMutableDictionary* codesKeysEmojisValues;
 @property (nonatomic) NSString* viewControllerCaller;
+@property (nonatomic) NSLocale *USLocale;
 @end
 
 @implementation IPARCountryTableViewController
 - (instancetype)initWithCaller:(NSString *)caller {
     self = [super init];
     if (self) {
+        _USLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
         _viewControllerCaller = [NSString string];
         _viewControllerCaller = caller;
+        
     }
     return self;
 }
@@ -25,11 +28,10 @@
     _codesKeysEmojisValues = [NSMutableDictionary dictionary];
 
     NSMutableArray *countries = [NSMutableArray arrayWithCapacity:[[NSLocale ISOCountryCodes] count]];
-
-    for (NSString *countryCode in [NSLocale ISOCountryCodes])
+    for (NSString *countryCode in  [NSLocale ISOCountryCodes])
     {
         NSString *identifier = [NSLocale localeIdentifierFromComponents:[NSDictionary dictionaryWithObject:countryCode forKey:NSLocaleCountryCode]];
-        NSString *country = [[NSLocale currentLocale] displayNameForKey:NSLocaleIdentifier value:identifier];
+        NSString *country = [self.USLocale displayNameForKey:NSLocaleIdentifier value:identifier];
         //stupid country unknon flag fuck cocos
         if ([country containsString:@"Cocos"]) {
             continue;
@@ -50,8 +52,7 @@
 - (NSString *)localeForFullCountryName:(NSString *)fullCountryName {
     NSString *locales = @"";
     for (NSString *localeCode in [NSLocale ISOCountryCodes]) {
-        NSLocale *identifier = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
-        NSString *countryName = [identifier displayNameForKey:NSLocaleCountryCode value:localeCode];
+        NSString *countryName = [self.USLocale displayNameForKey:NSLocaleCountryCode value:localeCode];
         if ([[fullCountryName lowercaseString] isEqualToString:[countryName lowercaseString]]) {
             return localeCode;
         }

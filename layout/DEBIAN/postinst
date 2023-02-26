@@ -9,6 +9,6 @@ if [ $? -ne 0 ]; then
 else
   echo "Settings up permissions is done.!"
   echo "Running uicache just in case the app wont appear.."
-  uicache
+  uicache -p /Applications/IPARanger.app
   echo "All done. enjoy!"
 fi

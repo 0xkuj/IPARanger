@@ -165,6 +165,18 @@ int spawnedProcessPid;
     return settings[@"AccountCountrySearch"] ? settings[@"AccountCountrySearch"] : @"US";
 }
 
++ (NSString *)getMostUpdatedAccountMailFromFie {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    return settings[@"AccountEmail"] ? settings[@"AccountEmail"] : @"N/A";
+}
+
++ (NSString *)getMostUpdatedAccountNameFromFile {
+    NSMutableDictionary *settings = [NSMutableDictionary dictionary];
+    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
+    return settings[@"AccountName"] ? settings[@"AccountName"] : @"N/A";
+}
+
 + (void)searchCountryToFile:(NSString *)accountCountry {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
@@ -179,7 +191,9 @@ int spawnedProcessPid;
 }
 
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode {
-    NSAssert(countryCode.length == 2, @"Expecting ISO country code");
+    if (countryCode.length != 2) {
+        countryCode = @"US";
+    }
 
     int base = 127462 -65;
 

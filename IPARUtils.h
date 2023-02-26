@@ -38,5 +38,7 @@ typedef void (^AlertActionBlock)(void);
 + (NSString *)humanReadableSizeForBytes:(long long)bytes;
 + (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip;
 + (NSString *)getMostUpdateLoginDate;
++ (NSString *)getMostUpdatedAccountMailFromFie;
++ (NSString *)getMostUpdatedAccountNameFromFile;
 @end
 

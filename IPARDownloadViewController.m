@@ -230,15 +230,22 @@
         NSString *str = @"\"%s (%s)\\n\"";
         //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p '%@' Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(Name|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
-        NSString *appName = [NSString string];
-        NSString *bundleName = [NSString string];
-        if ([standardAndErrorOutputs[@"standardOutput"][0] containsString:@"CFBundleName"]) {
-            appName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][0]];
-            bundleName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][1]];
-        } else {
-            appName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][1]];
-            bundleName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][0]];
+        NSString *appName = @"N/A";//[NSString string];
+        NSString *bundleName = @"N/A";//[NSString string];
+        for (id obj in standardAndErrorOutputs[@"standardOutput"])
+        {
+            NSLog(@"omriku wtf? %@ obj", obj);
         }
+        if ([standardAndErrorOutputs[@"standardOutput"] count] > 2) {
+            if ([standardAndErrorOutputs[@"standardOutput"][0] containsString:@"CFBundleName"]) {
+                appName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][0]];
+                bundleName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][1]];
+            } else {
+                appName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][1]];
+                bundleName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][0]];
+            }
+        }
+
         NSLog(@"omriku bundle? %@, appname: %@", bundleName, appName);
         //need to do that with the command from ealier.. think how you combine those two..
         // Check if the directory already exists
