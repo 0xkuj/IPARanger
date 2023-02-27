@@ -4,56 +4,11 @@
 <dict>
 	<key>application-identifier</key>
 	<string>com.0xkuj.iparanger</string>
-	<key>com.apple.CommCenter.fine-grained</key>
-	<array>
-		<string>cellular-plan</string>
-		<string>data-usage</string>
-		<string>data-allowed-write</string>
-		<string>preferences-write</string>
-	</array>
+    <key>platform-application</key>
+    <true/>
+    <key>com.apple.private.security.no-container</key>
+    <true/>
 	<key>com.apple.private.persona-mgmt</key>
-	<true/>
-
-	<!-- All entitlements from RootHelper except for com.apple.private.security.container-required=false -->
-	<key>platform-application</key>
-	<true/>
-	<key>com.apple.private.security.no-sandbox</key>
-	<true/>
-	<key>com.apple.private.security.container-manager</key>
-	<true/>
-	<key>com.apple.private.MobileContainerManager.allowed</key>
-	<true/>
-	<key>com.apple.private.coreservices.canmaplsdatabase</key>
-	<true/>
-	<key>com.apple.lsapplicationworkspace.rebuildappdatabases</key>
-	<true/>
-	<key>com.apple.private.security.storage.AppBundles</key>
-	<true/>
-	<key>com.apple.private.security.storage.MobileDocuments</key>
-	<true/>
-	<key>com.apple.private.security.storage-exempt.heritable</key>
-	<true/>
-	<key>com.apple.private.MobileInstallationHelperService.InstallDaemonOpsEnabled</key>
-	<true/>
-	<key>com.apple.private.MobileInstallationHelperService.allowed</key>
-	<true/>
-	<key>com.apple.private.uninstall.deletion</key>
-	<true/>
-	<key>com.apple.springboard.launchapplications</key>
-	<true/>
-	<key>com.apple.backboardd.launchapplications</key>
-	<true/>
-	<key>com.apple.frontboard.launchapplications</key>
-	<true/>
-	<key>com.apple.multitasking.termination</key>
-	<true/>
-	<key>com.apple.private.mobileinstall.allowedSPI</key>
-	<array>
-		<string>InstallForLaunchServices</string>
-		<string>Install</string>
-		<string>UninstallForLaunchServices</string>
-		<string>Uninstall</string>
-		<string>UpdatePlaceholderMetadata</string>
-	</array>
+    <true/>
 </dict>
 </plist>

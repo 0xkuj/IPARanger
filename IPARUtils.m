@@ -185,7 +185,6 @@ int spawnedProcessPid;
     [[NSNotificationCenter defaultCenter] postNotificationName:kIPARCountryChangedNotification object:nil];
 }
 
-//+ (void)cancelScript:(int)pid {
 + (void)cancelScript {
     kill(spawnedProcessPid, SIGKILL);
 }
@@ -221,7 +220,6 @@ int spawnedProcessPid;
             UIImage *iconImage = [UIImage imageWithData:iconData];
             NSLog(@"omriku returning image: %@ for bundle: %@", iconImage, bundleId);
             return iconImage;
-            // Use the icon image in your list
         }
     }
     NSLog(@"omriku returns nil FOR BUNDLE: %@", bundleId);

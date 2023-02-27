@@ -17,14 +17,12 @@
         _USLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
         _viewControllerCaller = [NSString string];
         _viewControllerCaller = caller;
-        
     }
     return self;
 }
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    // Do any additional setup after loading the view.
     _codesKeysEmojisValues = [NSMutableDictionary dictionary];
 
     NSMutableArray *countries = [NSMutableArray arrayWithCapacity:[[NSLocale ISOCountryCodes] count]];
@@ -32,7 +30,7 @@
     {
         NSString *identifier = [NSLocale localeIdentifierFromComponents:[NSDictionary dictionaryWithObject:countryCode forKey:NSLocaleCountryCode]];
         NSString *country = [self.USLocale displayNameForKey:NSLocaleIdentifier value:identifier];
-        //stupid country unknon flag fuck cocos
+        //stupid country unknown flag fuck cocos
         if ([country containsString:@"Cocos"]) {
             continue;
         }

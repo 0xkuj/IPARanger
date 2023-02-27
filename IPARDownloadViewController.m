@@ -6,6 +6,7 @@
 #import <libarchive/archive.h>
 #import <libarchive/archive_entry.h>
 #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 @interface IPARDownloadViewController ()
 @property (nonatomic, strong) NSMutableArray *existingApps;
@@ -23,11 +24,9 @@
 @end
 
 //improve download progress bar, its ugly.
-//bundle casuing crash if many apps. check why!!
 @implementation IPARDownloadViewController
 - (void)loadView {
-    [super loadView];
-    //size_t read = archive_read_data(_archive, buf, size);
+    [super loadView];;
     _isRefreshing = NO;
     _existingApps = [NSMutableArray array];
     _currentPrecentageDownload = [NSString string];
@@ -119,7 +118,6 @@
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
 }
 
-// I THINK ALERT CONTROLLER WILL BE THE BEST OPTION HERE. LESS BUGS.!
 - (void)setupDownloadViewControllerStyle {
     self.downloadViewController = [[UIViewController alloc] init];
     self.downloadViewController.view.backgroundColor = [UIColor blackColor];//[UIColor colorWithWhite:0 alpha:0.5];
@@ -195,6 +193,7 @@
     };
     return alertBlock;
 }
+
 - (void)populateTableWithExistingApps {
     NSLog(@"omriku will try to read directory content.. ");
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -230,13 +229,14 @@
         NSString *str = @"\"%s (%s)\\n\"";
         //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p '%@' Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(Name|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
-        NSString *appName = @"N/A";//[NSString string];
-        NSString *bundleName = @"N/A";//[NSString string];
+        NSString *appName = @"N/A";
+        NSString *bundleName = @"N/A";
         for (id obj in standardAndErrorOutputs[@"standardOutput"])
         {
             NSLog(@"omriku wtf? %@ obj", obj);
         }
         if ([standardAndErrorOutputs[@"standardOutput"] count] > 2) {
+            // sometimes info.plist contains CFBundleName first, and sometimes the opposite. thats why we are doing this
             if ([standardAndErrorOutputs[@"standardOutput"][0] containsString:@"CFBundleName"]) {
                 appName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][0]];
                 bundleName = [self parseValueFromKey:standardAndErrorOutputs[@"standardOutput"][1]];
@@ -271,8 +271,12 @@
 }
 
 - (void)addButtonTapped:(id)sender {
-  	UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"IPARanger - Download" message:@"Enter App Bundle ID" preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"Download" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"IPARanger - Download" message:@"Enter App Bundle ID" preferredStyle:UIAlertControllerStyleAlert];
+    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+        textField.placeholder = @"e.g com.facebook.Facebook";
+    }];
+    
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"Download" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
         // Retrieve the text entered in the text field
         UITextField *textField = alert.textFields.firstObject;
         self.lastBundleDownload = textField.text;
@@ -285,9 +289,9 @@
         [self.progressView setProgress:0.0f];
         NSLog(@"omriku sigining notif..");
         [[NSNotificationCenter defaultCenter] addObserver:self
-                                              selector:@selector(receivedData:)
-                                              name:NSFileHandleDataAvailableNotification
-                                              object:nil];
+                                            selector:@selector(receivedData:)
+                                            name:NSFileHandleDataAvailableNotification
+                                            object:nil];
         
         NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c %@", IPATOOL_SCRIPT_PATH, self.lastBundleDownload, IPARANGER_DOCUMENTS_LIBRARY, self.lastCountrySelected];
         //here we dont deal with errors since 'download' keyword throws notification
@@ -295,15 +299,10 @@
     }];
 
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
-
-    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
-        textField.placeholder = @"e.g com.facebook.Facebook";
-    }];
-
     [alert addAction:okAction];
     [alert addAction:cancelAction];
-
     [self presentViewController:alert animated:YES completion:nil];
+
 }
 
 #pragma mark - Table View Data Source
@@ -637,8 +636,6 @@
 }
 
 - (void)showErrorDialog:(NSString *)errorMessage {
-    //this is where you should handle errors!
-    // Create a UIAlertController with a custom view
     NSString *token = @"token";
     NSString *login = @"login";
     NSString *authentication = @"authentication";
@@ -674,29 +671,3 @@
     [IPARUtils cancelScript];
 }
 @end
-
-// - (void)showDownloadDialog {
-//     // UIView *overlayView = [[UIView alloc] initWithFrame:self.tableView.frame];
-//     // overlayView.backgroundColor = [UIColor colorWithWhite:0 alpha:0.5];
-//     // overlayView.userInteractionEnabled = NO;
-//     // [newViewController.view addSubview:overlayView];
-//     //this will force me to see the whole page (presetnviewcontroller)
-//     //this will work but will let me keep pressing buttons.
-//    //[self.view addSubview:self.downloadViewController.view];
-//     //consider - customized alert controller? but it will disable your tabs.. not sure you want to do this.
-//     // Create the progress view
-//     // UIProgressView *progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-//     // progressView.center = 
-//     UIAlertController *downloadAlert = [UIAlertController alertControllerWithTitle:@"Downloading..." message:nil preferredStyle:UIAlertControllerStyleAlert];
-//     UILabel *percentageLabel = [[UILabel alloc] initWithFrame:CGRectMake(120, 110, 40, 20)];
-//     percentageLabel.text = @"blablabla";
-//     [downloadAlert.view addSubview:percentageLabel];
-    
-//     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-//         // Handle cancel action here
-//     }];
-//     [downloadAlert addAction:cancelAction];
-//     [downloadAlert.view addSubview:self.progressView];
-
-//     [self presentViewController:downloadAlert animated:YES completion:nil];
-// }
