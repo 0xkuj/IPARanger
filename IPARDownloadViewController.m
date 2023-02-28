@@ -3,8 +3,7 @@
 #import "IPARCountryTableViewController.h"
 #import "IPARUtils.h"
 #import "IPARAppDownloadedCell.h"
-#import <libarchive/archive.h>
-#import <libarchive/archive_entry.h>
+#import "IPARConstants.h"
 #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -47,7 +46,7 @@
     self.tableView.backgroundView = _noDataLabel;
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
-    _lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile] ? [IPARUtils getMostUpdatedDownloadCountryFromFile] : @"US";
+    _lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
     _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
@@ -111,7 +110,7 @@
 }
 
 - (void)updateCountry {
-    self.lastCountrySelected = [IPARUtils getMostUpdatedDownloadCountryFromFile];
+    self.lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
     self.countryButton.title = [NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
@@ -152,7 +151,7 @@
             // Delete the file from the data source
             NSError *error;
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
-            BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, self.existingApps[indexPath.row][@"filename"]] error:&error];
+            BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, self.existingApps[indexPath.row][@"filename"]] error:&error];
             if (success == NO) {
                 NSLog(@"Error deleting file: %@", error);
             } 
@@ -172,14 +171,9 @@
     [IPARUtils presentMessageWithTitle:@"IPARanger\nDelete Files" message:confirmation numberOfActions:2 buttonText:@"YES" alertConfirmationBlock:alertConfirmationBlock alertCancelBlock:alertCancelBlock presentOn:self];
 }
 
-
-- (void)logoutAction {
-    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:[self getAlertBlockForLogout] alertCancelBlock:nil presentOn:self];
-}
-
 - (AlertActionBlock)getAlertBlockForLogout {  
     AlertActionBlock alertBlock = ^(void) {
-        NSLog(@"omriku logout ok!");
+         [IPARUtils accountDetailsToFile:@"" authName:@"" authenticated:@"NO"]; 
         IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
         // Step 1: Pop all view controllers from the navigation stack
         [self.navigationController popToRootViewControllerAnimated:NO];
@@ -189,7 +183,6 @@
         UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
         UIWindow *window = UIApplication.sharedApplication.delegate.window;
         window.rootViewController = navController;
-        [IPARUtils logoutToFile];  
     };
     return alertBlock;
 }
@@ -200,7 +193,7 @@
     NSError *error = nil;
 
     // Get an array of all files and directories in the specified directory
-    NSArray *files = [fileManager contentsOfDirectoryAtPath:IPARANGER_DOCUMENTS_LIBRARY error:&error];
+    NSArray *files = [fileManager contentsOfDirectoryAtPath:kIPARangerDocumentsPath error:&error];
     if (error) {
         NSLog(@"omriku Error getting contents of directory: %@", error);
         return;
@@ -216,7 +209,7 @@
     //NSArray *bundlesThatExists = [self retrieveBundlesInTmpFolder];
     for (NSString *fileName in ipaFiles) {
         NSLog(@"omriku checking file: %@", fileName);
-        NSString *filePath = [IPARANGER_DOCUMENTS_LIBRARY stringByAppendingPathComponent:fileName];
+        NSString *filePath = [kIPARangerDocumentsPath stringByAppendingPathComponent:fileName];
         NSDictionary *attributes = [fileManager attributesOfItemAtPath:filePath error:&error];
         if (error) {
             NSLog(@"omriku Error getting attributes of file at path: %@", filePath);
@@ -224,7 +217,7 @@
         }
         long long fileSize = [attributes fileSize];
         NSString *humanReadableSize = [IPARUtils humanReadableSizeForBytes:fileSize];
-        NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName];
+        NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName];
         // Load the Info.plist file from the IPA file
         NSString *str = @"\"%s (%s)\\n\"";
         //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
@@ -249,12 +242,12 @@
         NSLog(@"omriku bundle? %@, appname: %@", bundleName, appName);
         //need to do that with the command from ealier.. think how you combine those two..
         // Check if the directory already exists
-        NSString *tempDir = [NSString stringWithFormat:@"%@tmp/%@/", IPARANGER_DOCUMENTS_LIBRARY, bundleName];
+        NSString *tempDir = [NSString stringWithFormat:@"%@tmp/%@/", kIPARangerDocumentsPath, bundleName];
         if ([fileManager fileExistsAtPath:tempDir] == NO) {
             // Create the directory if it doesn't exist
             [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
         }
-        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, fileName] bundleId:bundleName tempDir:tempDir];
+        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName] bundleId:bundleName tempDir:tempDir];
         if (appImage == nil) {
             appImage = [UIImage systemImageNamed:@"questionmark.diamond.fill"];
         }
@@ -293,7 +286,7 @@
                                             name:NSFileHandleDataAvailableNotification
                                             object:nil];
         
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c %@", IPATOOL_SCRIPT_PATH, self.lastBundleDownload, IPARANGER_DOCUMENTS_LIBRARY, self.lastCountrySelected];
+        NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c %@", kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, self.lastCountrySelected];
         //here we dont deal with errors since 'download' keyword throws notification
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     }];
@@ -416,7 +409,7 @@
         [alert.view addSubview:spinner];
         [self presentViewController:alert animated:YES completion:nil]; 
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ %@%@", APPINST_SCRIPT_PATH, IPARANGER_DOCUMENTS_LIBRARY, ipaFilePath]];
+        standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ %@%@", kAppinstScriptPath, kIPARangerDocumentsPath, ipaFilePath]];
             //Successfully installed
             for (NSString *obj in standardAndErrorOutputs[@"standardOutput"]) {
                 if ([obj containsString:@"Successfully installed"]) {
@@ -441,7 +434,7 @@
 }
 
 - (NSArray *)retrieveBundlesInTmpFolder {
-    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@tmp/", IPARANGER_DOCUMENTS_LIBRARY]];
+    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@tmp/", kIPARangerDocumentsPath]];
     NSMutableArray *bundles = [NSMutableArray array];
     for (NSString *bundle in standardAndErrorOutputs[@"standardOutput"]) {
         if ([bundle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length > 0) {
@@ -508,7 +501,7 @@
         // Delete the file from the data source
         NSFileManager *fileManager = [NSFileManager defaultManager];
         NSError *error;
-        BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, pathToFile] error:&error];
+        BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, pathToFile] error:&error];
         if (success == NO) {
             NSLog(@"Error deleting file: %@", error);
         } 
@@ -528,7 +521,7 @@
 }
 
 - (void)shareFile:(NSString *)pathToFile {
-    NSURL *fileURL = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, pathToFile]];
+    NSURL *fileURL = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, pathToFile]];
     NSArray *activityItems = @[fileURL];
     
     UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:activityItems applicationActivities:nil];
@@ -537,7 +530,7 @@
 
 - (void)openInFilza:(NSString *)pathToFile {
 	UIApplication *application = [UIApplication sharedApplication];
-	NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:@"filza://%@%@", IPARANGER_DOCUMENTS_LIBRARY, pathToFile]];
+	NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:@"filza://%@%@", kIPARangerDocumentsPath, pathToFile]];
 	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
 }
 
@@ -545,7 +538,7 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
     
     // Get the current file name and path
-    NSString *fullPath = [NSString stringWithFormat:@"%@%@", IPARANGER_DOCUMENTS_LIBRARY, path];
+    NSString *fullPath = [NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, path];
     NSString *currentFileName = [fullPath lastPathComponent];
     NSString *currentDirectoryPath = [fullPath stringByDeletingLastPathComponent];
     

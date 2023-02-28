@@ -1,6 +1,7 @@
 #import "IPARAccountAndCredits.h"
 #import "IPARUtils.h"
 #import "IPARLoginScreenViewController.h"
+#import "IPARConstants.h"
 // Define constants for padding between views
 // static CGFloat const kVerticalPadding = 20.0;
 // static CGFloat const kHorizontalPadding = 16.0;
@@ -81,14 +82,14 @@
     [self.headerImageView.topAnchor constraintEqualToAnchor:headerView.safeAreaLayoutGuide.topAnchor constant:16].active = YES;
 
     self.accountNameLabel = [[UILabel alloc] init];
-    self.accountNameLabel.text = [IPARUtils getMostUpdatedAccountNameFromFile];
+    self.accountNameLabel.text = [IPARUtils getKeyFromFile:@"AccountName" defaultValueIfNil:@"N/A"];
     self.accountNameLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [contentView addSubview:self.accountNameLabel];
     [self.accountNameLabel.topAnchor constraintEqualToAnchor:self.headerImageView.bottomAnchor constant:16].active = YES;
     [self.accountNameLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
     self.emailLabel = [[UILabel alloc] init];
-    self.emailLabel.text = [IPARUtils getMostUpdatedAccountMailFromFie];
+    self.emailLabel.text = [IPARUtils getKeyFromFile:@"AccountEmail" defaultValueIfNil:@"N/A"];
     self.emailLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [contentView addSubview:self.emailLabel];
     [self.emailLabel.topAnchor constraintEqualToAnchor:self.accountNameLabel.bottomAnchor constant:8].active = YES;
@@ -105,14 +106,14 @@
     [self.logoutButton.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
     self.lastLoginDate = [[UILabel alloc] init];
-    self.lastLoginDate.text = [NSString stringWithFormat:@"Login Date: %@", [IPARUtils getMostUpdateLoginDate]];
+    self.lastLoginDate.text = [NSString stringWithFormat:@"Login Date: %@", [IPARUtils getKeyFromFile:@"lastLoginDate" defaultValueIfNil:@"N/A"]];
     self.lastLoginDate.translatesAutoresizingMaskIntoConstraints = NO;
     [contentView addSubview:self.lastLoginDate];
     [self.lastLoginDate.topAnchor constraintEqualToAnchor:self.emailLabel.bottomAnchor constant:96].active = YES;
     [self.lastLoginDate.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
 
     self.searchCountryLabel = [[UILabel alloc] init];
-    NSString *searchCountry = [IPARUtils getMostUpdatedSearchCountryFromFile];
+    NSString *searchCountry = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
     self.searchCountryLabel.text = [NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry];
     self.searchCountryLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [contentView addSubview:self.searchCountryLabel];
@@ -120,8 +121,8 @@
     [self.searchCountryLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
     
     self.downloadCountryLabel = [[UILabel alloc] init];
-    NSString *downloadCountry = [IPARUtils getMostUpdatedDownloadCountryFromFile];
-    self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:[IPARUtils getMostUpdatedDownloadCountryFromFile]], downloadCountry];
+    NSString *downloadCountry = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
+    self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:downloadCountry], downloadCountry];
     self.downloadCountryLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [contentView addSubview:self.downloadCountryLabel];
     [self.downloadCountryLabel.topAnchor constraintEqualToAnchor:self.searchCountryLabel.bottomAnchor constant:16].active = YES;
@@ -207,14 +208,14 @@
 }
 
 - (void)updateCountry {
-    NSString *searchCountry = [IPARUtils getMostUpdatedSearchCountryFromFile];
+    NSString *searchCountry = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
     self.searchCountryLabel.text = [NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry];
-    NSString *downloadCountry = [IPARUtils getMostUpdatedDownloadCountryFromFile];
-    self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:[IPARUtils getMostUpdatedDownloadCountryFromFile]], downloadCountry];
+    NSString *downloadCountry = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
+    self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:downloadCountry], downloadCountry];
 }
 
 - (void)handleLogout {
-    NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", IPATOOL_SCRIPT_PATH]];
+    NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", kIpatoolScriptPath]];
     if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
     {
         [self logoutAction];
@@ -233,7 +234,7 @@
         UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
         UIWindow *window = UIApplication.sharedApplication.delegate.window;
         window.rootViewController = navController;
-        [IPARUtils logoutToFile];  
+        [IPARUtils accountDetailsToFile:@"" authName:@"" authenticated:@"NO"];  
     };
     [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:alertBlock alertCancelBlock:nil presentOn:self];
 }

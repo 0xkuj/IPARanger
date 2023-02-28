@@ -92,9 +92,9 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
      NSString *countryCode = [self localeForFullCountryName:self.filteredCountries[indexPath.row]];
      if ([self.viewControllerCaller isEqualToString:@"Downloader"]) {
-        [IPARUtils downloadCountryToFile:countryCode];
+        [IPARUtils saveKeyToFile:@"AccountCountryDownload" withValue:countryCode];
      } else if ([self.viewControllerCaller isEqualToString:@"Search"]) {
-        [IPARUtils searchCountryToFile:countryCode];
+        [IPARUtils saveKeyToFile:@"AccountCountrySearch" withValue:countryCode];
      }
     
      self.searchController.searchBar.text = nil;

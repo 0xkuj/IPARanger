@@ -3,6 +3,7 @@
 #import "IPARDownloadViewController.h"
 #import "IPARAccountAndCredits.h"
 #import "IPARUtils.h"
+#import "IPARConstants.h"
 
 @interface IPARLoginScreenViewController ()
 @property (nonatomic) IBOutlet UITextField *emailTextField;
@@ -179,7 +180,7 @@
     [self presentViewController:alert animated:YES completion:nil];
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text];
+        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@", kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
         self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
@@ -237,7 +238,7 @@
     [self presentViewController:alert animated:YES completion:nil];
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@%@", IPATOOL_SCRIPT_PATH, self.emailTextField.text, self.passwordTextField.text, twoFARes];
+        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@%@", kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text, twoFARes];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
         self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
@@ -272,7 +273,7 @@
 }
 
 - (void)authToFile:(NSString *)authNameFromOutput {
-    [IPARUtils loginToFile:self.emailTextField.text authNameFromOutput:authNameFromOutput];
+    [IPARUtils accountDetailsToFile:self.emailTextField.text authName:authNameFromOutput authenticated:@"YES"];
 }
 
 - (void)setTabNavigation {

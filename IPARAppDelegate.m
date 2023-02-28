@@ -5,18 +5,15 @@
 #import "IPARSearchViewController.h"
 #import "IPARDownloadViewController.h"
 #import "IPARAccountAndCredits.h"
+#import "IPARConstants.h"
 
 @implementation IPARAppDelegate
 
 - (void)applicationDidFinishLaunching:(UIApplication *)application {
 	_window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-	//if will try to download and get token error or something, just logout, and change the value in plist.
-	//or actually think of a much better safer way, this is stupid.
-	//wtf
-	NSMutableDictionary *settings = [NSMutableDictionary dictionary];
-    [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:IPARANGER_SETTINGS_DICT]];
-	[self openURL];
-	if ([settings[@"Authenticated"] boolValue] == YES) {
+	[self basicSanity];
+
+	if ([[IPARUtils getKeyFromFile:@"Authenticated" defaultValueIfNil:@"NO"] isEqualToString:@"YES"]) {
 		//_rootViewController = [[UINavigationController alloc] initWithRootViewController:[[IPARSearchViewController alloc] init]];
         // Create the tab bar controller
         UITabBarController *tabBarController = [[UITabBarController alloc] init];
@@ -52,13 +49,12 @@
 		_rootViewController = [[UINavigationController alloc] initWithRootViewController:[[IPARLoginScreenViewController alloc] init]];
 		_window.rootViewController = _rootViewController;
 	}
-
 	[_window makeKeyAndVisible];
 }
 
-- (void)openURL {
+- (void)basicSanity {
 	#define sha256verification @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b"
-    NSString *s = [IPARUtils sha256ForFileAtPath:IPATOOL_SCRIPT_PATH];
+    NSString *s = [IPARUtils sha256ForFileAtPath:kIpatoolScriptPath];
     AlertActionBlock alertBlock = ^(void) {
         exit(0);
     };
@@ -67,6 +63,5 @@
     } else if (![s isEqualToString:sha256verification]) {
         [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Could not verify the integrity of files" numberOfActions:1 buttonText:@"Exit IPARanger" alertConfirmationBlock:alertBlock alertCancelBlock:nil presentOn:self];
     }
-    NSLog(@"omriku ipatool binary was found. all good!");
 }
 @end

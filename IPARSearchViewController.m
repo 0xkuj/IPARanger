@@ -4,6 +4,7 @@
 #import "IPARCountryTableViewController.h"
 #import "IPARUtils.h"
 #import "IPARAppCell.h"
+#import "IPARConstants.h"
 
 #define APPS_SEARCH_INITIAL_LIMIT 12
 
@@ -48,7 +49,7 @@
     _latestSearchTerm = [NSString string];
     self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Search"];
     _lastCountrySelected = [NSString string];
-    _lastCountrySelected = [IPARUtils getMostUpdatedSearchCountryFromFile] ? [IPARUtils getMostUpdatedSearchCountryFromFile] : @"US";
+    _lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
     _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
@@ -69,7 +70,7 @@
 }
 
 - (void)updateCountry {
-    self.lastCountrySelected = [IPARUtils getMostUpdatedSearchCountryFromFile];
+    self.lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
     self.countryButton.title = [NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];  
@@ -187,9 +188,9 @@
     NSArray *parsedAppBundle = [NSArray array];
     NSArray *parsedAppName = [NSArray array];
     NSArray *parsedAppVersion = [NSArray array];
-    parsedAppBundle = [self stambundle:self.searchResults];
-    parsedAppName = [self stamapps:self.searchResults];
-    parsedAppVersion = [self stamversion:self.searchResults];
+    parsedAppBundle = [self parseBundleFromStrings:self.searchResults];
+    parsedAppName = [self parseAppNameFromStrings:self.searchResults];
+    parsedAppVersion = [self parseAppVersionFromStrings:self.searchResults];
 
     for (int i=0; i<[[self.searchResults copy] count]; i++) {
         if (i < [parsedAppName count] && i < [parsedAppVersion count] && i < [parsedAppBundle count]) {
@@ -203,8 +204,10 @@
     }
 }
 
+//SOLVE DUPLICATIONS!!!!!!!!!!!!!!!
+
 //bundle - works well! need to see if that is hitting performace. dont really care for 1-2 more seconds!
-- (NSArray *)stambundle:(NSArray *)strings {
+- (NSArray *)parseBundleFromStrings:(NSArray *)strings {
     NSError *error = nil;
     NSMutableArray *retval = [NSMutableArray array];
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@":\\s*(\\S+)\\s*\\(" options:0 error:&error];
@@ -222,7 +225,7 @@
 }
 
 //appname - works well! need to see if that is hitting performace. dont really care for 1-2 more seconds!
-- (NSArray *)stamapps:(NSArray *)strings {
+- (NSArray *)parseAppNameFromStrings:(NSArray *)strings {
     NSError *error = nil;
     NSMutableArray *retval = [NSMutableArray array];
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^\\d+\\.\\s*([^:-]+)" options:0 error:&error];
@@ -239,7 +242,7 @@
     return retval;
 }
 
-- (NSArray *)stamversion:(NSArray *)strings {
+- (NSArray *)parseAppVersionFromStrings:(NSArray *)strings {
     NSString *pattern = @"\\((.*?)\\)[^\\(]*$";
     NSMutableArray *retval = [NSMutableArray array];
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
