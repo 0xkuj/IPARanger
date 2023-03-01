@@ -19,6 +19,15 @@
 @end
 
 @implementation IPARAccountAndCredits
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        self.title = @"Account";
+		self.tabBarItem.image = [UIImage systemImageNamed:@"person.crop.circle"];
+		self.tabBarItem.title = @"Account";
+    }
+    return self;
+}
 
 - (void)loadView {
     [super loadView];
@@ -216,15 +225,14 @@
 
 - (void)handleLogout {
     NSDictionary *didLogoutOK = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ auth revoke", kIpatoolScriptPath]];
-    if ([didLogoutOK[@"standardOutput"][0] containsString:@"Revoked credentials for"] || [didLogoutOK[@"errorOutput"][0] containsString:@"No credentials available to revoke"])
+    if ([didLogoutOK[kstdOutput][0] containsString:@"Revoked credentials for"] || [didLogoutOK[kerrorOutput][0] containsString:@"No credentials available to revoke"])
     {
         [self logoutAction];
     }
 }
 
 - (void)logoutAction {
-    AlertActionBlock alertBlock = ^(void) {
-        NSLog(@"omriku logout ok!");
+    AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
         // Step 1: Pop all view controllers from the navigation stack
         [self.navigationController popToRootViewControllerAnimated:NO];
@@ -236,7 +244,8 @@
         window.rootViewController = navController;
         [IPARUtils accountDetailsToFile:@"" authName:@"" authenticated:@"NO"];  
     };
-    [IPARUtils presentMessageWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" numberOfActions:2 buttonText:@"Yes" alertConfirmationBlock:alertBlock alertCancelBlock:nil presentOn:self];
+    [IPARUtils presentDialogWithTitle:@"IPARanger\nLogout" message:@"You are about to perform logout\nAre you sure?" hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Yes" alertCancelBlock:nil withCancelText:@"No" presentOn:self];
 }
 
 -(void)openTW {

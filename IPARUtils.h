@@ -16,6 +16,8 @@
 @end
 
 typedef void (^AlertActionBlock)(void);
+typedef void (^AlertActionBlockWithTextField)(UITextField *);
+typedef void (^AlertTextFieldBlock)(UITextField *);
 
 @interface IPARUtils : NSObject
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command;
@@ -27,13 +29,18 @@ typedef void (^AlertActionBlock)(void);
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode;
 + (UIImage *)getAppIconFromApple:(NSString *)bundleId;
 + (NSString *)humanReadableSizeForBytes:(long long)bytes;
-+ (void)presentMessageWithTitle:(NSString *)title 
-                        message:(NSString *)message 
-                        numberOfActions:(NSUInteger)numberOfActions 
-                        buttonText:(NSString *)buttonText 
-                        alertConfirmationBlock:(AlertActionBlock)confirmationBlock 
-                        alertCancelBlock:(AlertActionBlock)cancelBlock 
-                        presentOn:(id)viewController;
++ (NSArray *)parseDetailFromStringByRegex:(NSArray *)strings regex:(NSString *)regex;
++ (NSArray *)parseAppVersionFromStrings:(NSArray *)strings;
++ (void)presentDialogWithTitle:(NSString *)title 
+                    message:(NSString *)message
+                    hasTextfield:(BOOL)hasTextfield
+                    withTextfieldBlock:(AlertTextFieldBlock)textFieldBlock
+                    alertConfirmationBlock:(AlertActionBlockWithTextField)confirmationBlock
+                    withConfirmText:(NSString *)confirmText
+                    alertCancelBlock:(AlertActionBlock)cancelBlock
+                    withCancelText:(NSString *)cancelText
+                    presentOn:(id)viewController;
++ (UIActivityIndicatorView *)createActivitiyIndicatorWithPoint:(CGPoint)point;
 + (void)cancelScript;
 @end
 

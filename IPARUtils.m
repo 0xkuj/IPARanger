@@ -9,19 +9,18 @@ int spawnedProcessPid;
 @implementation IPARUtils
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command {
     NSTask *task = [[NSTask alloc] init];
-    NSMutableArray *args = [NSMutableArray array];
-    [args addObject:@"-c"];
-    [args addObject:command];
     [task setLaunchPath:kLaunchPathBash];
-    [task setArguments:args];
+    [task setArguments:@[@"-c", command]];
     NSPipe *outputPipe = [NSPipe pipe];
     NSPipe *errorPipe = [NSPipe pipe];
     [task setStandardError:errorPipe];
     [task setStandardOutput:outputPipe];
+    [task launch];
+
     NSArray *standardOutputArray = [NSArray array];
     NSArray *errorOutputArray = [NSArray array];
-    [task launch];
     spawnedProcessPid = task.processIdentifier;
+
     if ([command containsString:@"download"]) {
        [[errorPipe fileHandleForReading] waitForDataInBackgroundAndNotify];
        [[outputPipe fileHandleForReading] waitForDataInBackgroundAndNotify];
@@ -34,7 +33,7 @@ int spawnedProcessPid;
         errorOutputArray = [errorOutput componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
     }
     
-    return @{@"standardOutput": standardOutputArray, @"errorOutput": errorOutputArray};
+    return @{kstdOutput: standardOutputArray, kerrorOutput: errorOutputArray};
 }
 
 + (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip {
@@ -93,8 +92,7 @@ int spawnedProcessPid;
     }
 }
 
-+ (void)accountDetailsToFile:(NSString *)userEmail authName:(NSString *)authName authenticated:(NSString *)authenticated 
-{
++ (void)accountDetailsToFile:(NSString *)userEmail authName:(NSString *)authName authenticated:(NSString *)authenticated {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:kIPARangerSettingsDict]];
     settings[@"AccountEmail"] = userEmail;
@@ -174,31 +172,83 @@ int spawnedProcessPid;
     return sizeString;
 }
 
-+ (void)presentMessageWithTitle:(NSString *)title 
-                      message:(NSString *)message 
-                      numberOfActions:(NSUInteger)numberOfActions 
-                      buttonText:(NSString *)buttonText 
-                      alertConfirmationBlock:(AlertActionBlock)confirmationBlock 
-                      alertCancelBlock:(AlertActionBlock)cancelBlock
-                      presentOn:(id)viewController {
++ (NSArray *)parseDetailFromStringByRegex:(NSArray *)strings regex:(NSString *)regex {
+    NSError *error = nil;
+    NSMutableArray *retval = [NSMutableArray array];
+    NSRegularExpression *regx = [NSRegularExpression regularExpressionWithPattern:regex options:0 error:&error];
+
+    for (NSString *string in strings) {
+        NSTextCheckingResult *match = [regx firstMatchInString:string options:0 range:NSMakeRange(0, string.length)];
+        if (match) {
+            NSRange range = [match rangeAtIndex:1];
+            [retval addObject:[string substringWithRange:range]];
+        }
+    }
+    return retval;
+}
+
++ (NSArray *)parseAppVersionFromStrings:(NSArray *)strings {
+    NSString *pattern = @"\\((.*?)\\)[^\\(]*$";
+    NSMutableArray *retval = [NSMutableArray array];
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
+
+    for (NSString *string in strings) {
+        NSRange range = [regex rangeOfFirstMatchInString:string options:NSMatchingReportCompletion range:NSMakeRange(0, [string length])];
+        if (range.location != NSNotFound) {
+            NSString *version = [string substringWithRange:range];
+            [retval addObject:[version substringWithRange:NSMakeRange(1, [version length] - 3)]];
+        }
+    }
+    return retval;
+}
+
++ (void)presentDialogWithTitle:(NSString *)title 
+                    message:(NSString *)message
+                    hasTextfield:(BOOL)hasTextfield
+                    withTextfieldBlock:(AlertTextFieldBlock)textFieldBlock
+                    alertConfirmationBlock:(AlertActionBlockWithTextField)confirmationBlock
+                    withConfirmText:(NSString *)confirmText
+                    alertCancelBlock:(AlertActionBlock)cancelBlock
+                    withCancelText:(NSString *)cancelText
+                    presentOn:(id)viewController {
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:buttonText style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        if (confirmationBlock != nil) {
-            confirmationBlock();
-        }
-    }];
-    [alert addAction:okAction];
-    if (numberOfActions > 1) {
-        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+    if (hasTextfield == YES) {
+        [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
+            textFieldBlock(textField);
+        }];
+    }
+    if ([confirmText length] != 0) {
+        UIAlertAction *confirmAction = [UIAlertAction actionWithTitle:confirmText style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            if (confirmationBlock != nil) {
+                if (hasTextfield == YES) {
+                    confirmationBlock(alert.textFields.firstObject);
+                } else {
+                    confirmationBlock(nil);
+                }
+            }
+        }];
+        [alert addAction:confirmAction];
+    }
+
+    if ([cancelText length] != 0) {
+        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:cancelText style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
             if (cancelBlock != nil) {
                 cancelBlock();
             }
         }];
         [alert addAction:cancelAction];
     }
-
+    
     [viewController presentViewController:alert animated:YES completion:nil];
+}
+
++ (UIActivityIndicatorView *)createActivitiyIndicatorWithPoint:(CGPoint)point {
+    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
+    spinner.center = point;
+    spinner.color = [UIColor grayColor];
+    [spinner startAnimating];
+    return spinner;
 }
 
 + (void)cancelScript {

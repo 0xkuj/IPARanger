@@ -49,18 +49,15 @@
         self.appBundle.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
         self.appBundle.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appBundle];
-        
         [self.appBundle top:self.appName.bottomAnchor padding:1];
         [self.appBundle leading:self.appImage.trailingAnchor padding:15];
-        //Fit bundle to the size of the cell
         self.appBundle.translatesAutoresizingMaskIntoConstraints = NO;
         [self.baseView addConstraints:@[
             [self.baseView.trailingAnchor constraintGreaterThanOrEqualToAnchor:self.appBundle.trailingAnchor constant:10],
             [self.baseView.bottomAnchor constraintGreaterThanOrEqualToAnchor:self.appBundle.bottomAnchor constant:10]
         ]];
         self.appBundle.adjustsFontSizeToFitWidth = YES;
-        self.appBundle.minimumScaleFactor = 0.3; // Or any other value between 0 an
-        // [self.appBundle trailing:self.timeLabel.leadingAnchor padding:-10];
+        self.appBundle.minimumScaleFactor = 0.3; 
         
         self.appVersion = [[UILabel alloc] init];
         self.appVersion.textColor = UIColor.tertiaryLabelColor;
@@ -69,14 +66,14 @@
         [self.baseView addSubview:self.appVersion];
         
         [self.appVersion top:self.appBundle.bottomAnchor padding:0];
-        [self.appVersion leading:self.appImage.trailingAnchor padding:15];
-        // [self.appVersion trailing:self.timeLabel.leadingAnchor padding:-10];      
+        [self.appVersion leading:self.appImage.trailingAnchor padding:15];    
     }
     
     return self;
 }
 
-
+//THINK ABOUT UNITING BOTH CELL CLASSES
+//UP NEXT: MOVE TO FOLDERS!
 -(void)prepareForReuse {
     [super prepareForReuse];
     self.appImage.image = nil;
@@ -84,5 +81,4 @@
     self.appBundle.text = nil;
     self.appVersion.text = nil;
 }
-
 @end

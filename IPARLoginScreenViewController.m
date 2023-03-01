@@ -16,8 +16,8 @@
 
 @implementation IPARLoginScreenViewController
 
-- (void)viewDidLoad {
-    [super viewDidLoad];
+- (void)loadView {
+    [super loadView];
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
     [self setLoginButtons];
@@ -138,12 +138,10 @@
 {
     NSDictionary *userInfo = [notification userInfo];
     CGRect keyboardFrame = [[userInfo objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue];
-
     CGFloat keyboardHeight = keyboardFrame.size.height;
-
     CGRect newFrame = self.view.frame;
-    newFrame.origin.y = -20;
 
+    newFrame.origin.y = -20;
     [UIView animateWithDuration:0.3 animations:^{
         self.view.frame = newFrame;
     }];
@@ -172,87 +170,81 @@
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Logging in..."
                                                                 message:@"\n\n\n"
                                                             preferredStyle:UIAlertControllerStyleAlert];
-    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    spinner.center = CGPointMake(130.5, 65.5);
-    spinner.color = [UIColor whiteColor];
-    [spinner startAnimating];
-    [alert.view addSubview:spinner];
+
+    [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 65.5)]];
     [self presentViewController:alert animated:YES completion:nil];
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@", kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
-        self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
-        self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+        self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
+        self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
 
         if ([self checkIfUserPassedAuthentication] == NO) {
-            for (id obj in self.linesErrorOutput) {
-                NSLog(@"omriku line error :%@", obj);
-                if ([obj containsString:@"2FA"]) {
-                    [self dismissViewControllerAnimated:YES completion:^{
-                        [self handle2FADialog];
-                    }];
-                } else if ([obj containsString:@"Missing value for"]) {
-                    [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
-                    }];
-                } else {
-                    [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
-                    }];
-                }
-            }
+            [self analyzeErrorsOrContinueTo2FA];
         }
     });
 }
 
+- (void)analyzeErrorsOrContinueTo2FA {
+    for (id obj in self.linesErrorOutput) {
+        if ([obj containsString:@"2FA"]) {
+            [self dismissViewControllerAnimated:YES completion:^{
+                [self handle2FADialog];
+            }];
+        } else if ([obj containsString:@"Missing value for"]) {
+            [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" hasTextfield:NO withTextfieldBlock:nil
+                    alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }];
+        } else {
+            [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:obj hasTextfield:NO withTextfieldBlock:nil
+                    alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }];
+        }
+    }
+}
+
 - (void)handle2FADialog {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Continue with 2FA" message:@"Please enter 2FA you got from Apple" preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        // Retrieve the text entered in the text field
-        UITextField *textField = alert.textFields.firstObject;
+    AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         NSString *twoFAResponse = textField.text;
         [self handle2FALogic:twoFAResponse];
-    }];
+    };
 
-    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+    AlertTextFieldBlock alertBlockTextfield = ^(UITextField *textField) {
+            textField.placeholder = textField.text;
+    };
 
-    [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
-        textField.placeholder = @"Enter your 2FA you got from Apple here";
-    }];
-
-    [alert addAction:okAction];
-    [alert addAction:cancelAction];
-    [self presentViewController:alert animated:YES completion:nil];
+    [IPARUtils presentDialogWithTitle:@"Continue with 2FA" message:@"Please enter the 2FA you got from Apple" hasTextfield:YES withTextfieldBlock:alertBlockTextfield
+                    alertConfirmationBlock:alertBlockConfirm withConfirmText:@"OK" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 }
 
 - (void)handle2FALogic:(NSString *)twoFARes {
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Logging in with 2FA..."
                                                                 message:@"\n\n\n"
                                                             preferredStyle:UIAlertControllerStyleAlert];
-    UIActivityIndicatorView *spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
-    spinner.center = CGPointMake(130.5, 65.5);
-    spinner.color = [UIColor whiteColor];
-    [spinner startAnimating];
-    [alert.view addSubview:spinner];
+
+    [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 65.5)]];
     [self presentViewController:alert animated:YES completion:nil];
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@%@", kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text, twoFARes];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
-        self.linesStandardOutput = standardAndErrorOutputs[@"standardOutput"];
-        self.linesErrorOutput = standardAndErrorOutputs[@"errorOutput"];
+        self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
+        self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
 
         if ([self checkIfUserPassedAuthentication] == NO) {
             for (id obj in self.linesErrorOutput) {
-                NSLog(@"omriku line error :%@", obj);
                 if ([obj containsString:@"An unknown error has occurred"]) {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:@"Can't log you in\nCheck your Apple ID and Apple ID Password and try again" numberOfActions:1 buttonText:@"Try Again" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
+                        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"Can't log you in\nCheck your Apple ID and password and try again" hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
                     }];
                 } else {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentMessageWithTitle:@"IPARanger\nError" message:obj numberOfActions:1 buttonText:@"OK" alertConfirmationBlock:nil alertCancelBlock:nil presentOn:self];
+                        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:obj hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
                     }];
                 }
             }
@@ -262,7 +254,6 @@
 
 - (BOOL)checkIfUserPassedAuthentication {
     for (id obj in self.linesStandardOutput) {
-        NSLog(@"omriku line output :%@", obj);
         if ([obj containsString:@"Authenticated as"]) {
             [self authToFile:obj];
             [self setTabNavigation];
@@ -277,32 +268,18 @@
 }
 
 - (void)setTabNavigation {
+    IPARSearchViewController *searchVC = [[IPARSearchViewController alloc] init];
+    UINavigationController *searchNC = [[UINavigationController alloc] initWithRootViewController:searchVC];    
+
+    IPARDownloadViewController *downloadVC = [[IPARDownloadViewController alloc] init];
+    UINavigationController *downloadNC = [[UINavigationController alloc] initWithRootViewController:downloadVC];    
+
+    IPARAccountAndCredits *accountVC = [[IPARAccountAndCredits alloc] init];
+    UINavigationController *accountNC = [[UINavigationController alloc] initWithRootViewController:accountVC]; 
+
     UITabBarController *tabBarController = [[UITabBarController alloc] init];
-    // Create the first view controller
-    IPARSearchViewController *firstViewController = [[IPARSearchViewController alloc] init];
-    firstViewController.title = @"Search";
-    firstViewController.tabBarItem.image = [UIImage systemImageNamed:@"magnifyingglass"];
-    firstViewController.tabBarItem.title = @"Search";
-    // Create the navigation controller for the first view controller
-    UINavigationController *firstNavigationController = [[UINavigationController alloc] initWithRootViewController:firstViewController];
+    tabBarController.viewControllers = @[searchNC, downloadNC, accountNC];
 
-    // Create the second view controller
-    IPARDownloadViewController *secondViewController = [[IPARDownloadViewController alloc] init];
-    secondViewController.title = @"Download";
-    secondViewController.tabBarItem.image = [UIImage systemImageNamed:@"square.stack.3d.up"];
-    secondViewController.tabBarItem.title = @"Download";
-    // Create the navigation controller for the second view controller
-    UINavigationController *secondNavigationController = [[UINavigationController alloc] initWithRootViewController:secondViewController];
-
-	IPARAccountAndCredits *thirdViewController = [[IPARAccountAndCredits alloc] init];
-	thirdViewController.title = @"Account";
-	thirdViewController.tabBarItem.image = [UIImage systemImageNamed:@"person.crop.circle"];
-	thirdViewController.tabBarItem.title = @"Account";
-    // Create the navigation controller for the second view controller
-    UINavigationController *thirdNavigationController = [[UINavigationController alloc] initWithRootViewController:thirdViewController];
-    // Add the navigation controllers to the tab bar controller
-    tabBarController.viewControllers = @[firstNavigationController, secondNavigationController, thirdNavigationController];
-    // Set the tab bar controller as the root view controller
     UIWindow *window = UIApplication.sharedApplication.delegate.window;
     window.rootViewController = tabBarController;
 }
