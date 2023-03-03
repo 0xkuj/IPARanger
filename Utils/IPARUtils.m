@@ -1,7 +1,7 @@
 #import "IPARUtils.h"
 #include <spawn.h>
 #include <signal.h>
-#import "IPARConstants.h"
+#import "../Extensions/IPARConstants.h"
 
 // global variable to store the pid of the spawned process
 int spawnedProcessPid;
@@ -187,6 +187,13 @@ int spawnedProcessPid;
     return retval;
 }
 
++ (NSString *)parseValueFromKey:(NSString *)CFKey {
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^(.+?)\\s*\\(" options:0 error:nil];
+    NSTextCheckingResult *match = [regex firstMatchInString:CFKey options:0 range:NSMakeRange(0, [CFKey length])];
+    NSString *result = [CFKey substringWithRange:[match rangeAtIndex:1]];
+    return result;
+}
+
 + (NSArray *)parseAppVersionFromStrings:(NSArray *)strings {
     NSString *pattern = @"\\((.*?)\\)[^\\(]*$";
     NSMutableArray *retval = [NSMutableArray array];
@@ -200,6 +207,16 @@ int spawnedProcessPid;
         }
     }
     return retval;
+}
+
++ (void)animateClickOnCell:(UITableViewCell *)cell {
+    [UIView animateWithDuration:0.08 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+        cell.transform = CGAffineTransformMakeScale(0.90, 0.90);
+    } completion:^(BOOL finished) {
+        [UIView animateWithDuration:0.08 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
+            cell.transform = CGAffineTransformIdentity;
+        } completion:nil];
+    }];
 }
 
 + (void)presentDialogWithTitle:(NSString *)title 

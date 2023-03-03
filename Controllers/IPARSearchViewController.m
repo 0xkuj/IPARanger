@@ -2,11 +2,9 @@
 #import "IPARDownloadViewController.h"
 #import "IPARLoginScreenViewController.h"
 #import "IPARCountryTableViewController.h"
-#import "IPARUtils.h"
-#import "IPARAppCell.h"
-#import "IPARConstants.h"
-
-#define APPS_SEARCH_INITIAL_LIMIT 12
+#import "../Utils/IPARUtils.h"
+#import "../Cells/IPARAppCell.h"
+#import "../Extensions/IPARConstants.h"
 
 @interface IPARSearchViewController ()
 @property (nonatomic) UIButton *searchButton;
@@ -27,7 +25,7 @@
     if (self) {
        	self.title = @"Search";
 		self.tabBarItem.image = [UIImage systemImageNamed:@"magnifyingglass"];
-		self.tabBarItem.title = @"SearchAAA";
+		self.tabBarItem.title = @"Search";
     }
     return self;
 }
@@ -251,6 +249,8 @@
 #pragma mark - Table View Delegate
 // copy the bundle upon cell selection
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+    [IPARUtils animateClickOnCell:cell];
     if (indexPath.row < [self.searchResults count]) {
         AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
             UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];

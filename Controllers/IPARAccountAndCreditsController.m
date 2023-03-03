@@ -1,7 +1,7 @@
-#import "IPARAccountAndCredits.h"
-#import "IPARUtils.h"
+#import "IPARAccountAndCreditsController.h"
+#import "../Utils/IPARUtils.h"
 #import "IPARLoginScreenViewController.h"
-#import "IPARConstants.h"
+#import "../Extensions/IPARConstants.h"
 // Define constants for padding between views
 // static CGFloat const kVerticalPadding = 20.0;
 // static CGFloat const kHorizontalPadding = 16.0;

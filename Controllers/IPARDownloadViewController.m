@@ -1,9 +1,9 @@
 #import "IPARDownloadViewController.h"
 #import "IPARLoginScreenViewController.h"
 #import "IPARCountryTableViewController.h"
-#import "IPARUtils.h"
-#import "IPARAppDownloadedCell.h"
-#import "IPARConstants.h"
+#import "../Utils/IPARUtils.h"
+#import "../Extensions/IPARConstants.h"
+#import "../Cells/IPARAppCell.h"
 #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -99,10 +99,9 @@
     [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 75)]];
     [self presentViewController:alert animated:YES completion:nil];
 
-    //Dispatch the command to a background queue
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         [self populateTableWithExistingApps];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             dispatch_async(dispatch_get_main_queue(), ^{
                 [self dismissViewControllerAnimated:YES completion:nil];
                 [self.tableView reloadData];
@@ -217,17 +216,17 @@
         // Load the Info.plist file from the IPA file
         NSString *str = @"\"%s (%s)\\n\"";
         //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p '%@' Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(Name|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p '%@' Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(DisplayName|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
         NSString *appName = @"N/A";
         NSString *bundleName = @"N/A";
         if ([standardAndErrorOutputs[kstdOutput] count] > 2) {
             // sometimes info.plist contains CFBundleName first, and sometimes the opposite. thats why we are doing this
-            if ([standardAndErrorOutputs[kstdOutput][0] containsString:@"CFBundleName"]) {
-                appName = [self parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
-                bundleName = [self parseValueFromKey:standardAndErrorOutputs[kstdOutput][1]];
+            if ([standardAndErrorOutputs[kstdOutput][0] containsString:@"CFBundleDisplayName"]) {
+                appName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
+                bundleName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][1]];
             } else {
-                appName = [self parseValueFromKey:standardAndErrorOutputs[kstdOutput][1]];
-                bundleName = [self parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
+                appName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][1]];
+                bundleName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
             }
         }
         NSString *tempDir = [NSString stringWithFormat:@"%@tmp/%@/", kIPARangerDocumentsPath, bundleName];
@@ -240,13 +239,6 @@
         }
         [self.existingApps addObject:@{@"filename": fileName, @"size": humanReadableSize, @"appname" : appName, @"appimage" : appImage}];
     }
-}
-
-- (NSString *)parseValueFromKey:(NSString *)CFKey{
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^(.+?)\\s*\\(" options:0 error:nil];
-    NSTextCheckingResult *match = [regex firstMatchInString:CFKey options:0 range:NSMakeRange(0, [CFKey length])];
-    NSString *result = [CFKey substringWithRange:[match rangeAtIndex:1]];
-    return result;
 }
 
 - (void)downloadButtonTapped:(id)sender {
@@ -296,10 +288,10 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    IPARAppDownloadedCell *cell = [tableView dequeueReusableCellWithIdentifier:@"IPARAppDownloadedCell"];
+    IPARAppCell *cell = [tableView dequeueReusableCellWithIdentifier:@"IPARAppCell"];
         
     if (cell == nil) {
-        cell = [[IPARAppDownloadedCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"IPARAppDownloadedCell"];
+        cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"IPARAppCell"];
     }
     if (indexPath.row < self.existingApps.count) {
         UIView *selectionView = [UIView new];
@@ -313,14 +305,6 @@
     }
 
     return cell;
-	// static NSString *CellIdentifier = @"Cell";
-	// UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
-	// if (!cell) {
-	// 	cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
-	// }
-
-    cell.textLabel.text = [NSString stringWithFormat:@"appname: %@ size: %@", self.existingApps[indexPath.row][@"filename"], self.existingApps[indexPath.row][@"size"]]; 
-	return cell;
 }
 
 // - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -332,14 +316,8 @@
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
    UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
-    
-    [UIView animateWithDuration:0.08 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
-        cell.transform = CGAffineTransformMakeScale(0.90, 0.90);
-    } completion:^(BOOL finished) {
-        [UIView animateWithDuration:0.08 delay:0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
-            cell.transform = CGAffineTransformIdentity;
-        } completion:nil];
-    }];
+   [IPARUtils animateClickOnCell:cell];
+
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleActionSheet];
     
     // Create actions
@@ -409,7 +387,7 @@
 
     NSString *confirmation = [NSString stringWithFormat:@"You are about to install App: %@\n\nAre you sure?", appName];
     [IPARUtils presentDialogWithTitle:@"IPARanger\nInstall Application" message:confirmation hasTextfield:NO withTextfieldBlock:nil
-                            alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Yes, Continue" alertCancelBlock:nil withCancelText:nil presentOn:self];
+                            alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Yes, Continue" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 }
 
 - (NSArray *)retrieveBundlesInTmpFolder {

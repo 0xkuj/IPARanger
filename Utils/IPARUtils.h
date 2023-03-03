@@ -30,7 +30,9 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
 + (UIImage *)getAppIconFromApple:(NSString *)bundleId;
 + (NSString *)humanReadableSizeForBytes:(long long)bytes;
 + (NSArray *)parseDetailFromStringByRegex:(NSArray *)strings regex:(NSString *)regex;
++ (NSString *)parseValueFromKey:(NSString *)CFKey;
 + (NSArray *)parseAppVersionFromStrings:(NSArray *)strings;
++ (void)animateClickOnCell:(UITableViewCell *)cell;
 + (void)presentDialogWithTitle:(NSString *)title 
                     message:(NSString *)message
                     hasTextfield:(BOOL)hasTextfield

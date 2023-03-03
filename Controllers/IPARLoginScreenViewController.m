@@ -1,9 +1,9 @@
 #import "IPARLoginScreenViewController.h"
 #import "IPARSearchViewController.h"
 #import "IPARDownloadViewController.h"
-#import "IPARAccountAndCredits.h"
-#import "IPARUtils.h"
-#import "IPARConstants.h"
+#import "IPARAccountAndCreditsController.h"
+#import "../Utils/IPARUtils.h"
+#import "../Extensions/IPARConstants.h"
 
 @interface IPARLoginScreenViewController ()
 @property (nonatomic) IBOutlet UITextField *emailTextField;

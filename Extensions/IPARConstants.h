@@ -7,3 +7,5 @@ static NSString *const kIpatoolScriptPath = @"/Applications/IPARanger.app/ipatoo
 static NSString *const kAppinstScriptPath = @"/Applications/IPARanger.app/ipatool/appinst";
 static NSString *const kstdOutput = @"standardOutput";
 static NSString *const kerrorOutput = @"errorOutput";
+static NSString *const kSha256verification = @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b";
+static const int APPS_SEARCH_INITIAL_LIMIT = 12;

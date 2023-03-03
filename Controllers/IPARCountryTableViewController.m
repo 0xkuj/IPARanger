@@ -1,5 +1,5 @@
 #import "IPARCountryTableViewController.h"
-#import "IPARUtils.h"
+#import "../Utils/IPARUtils.h"
 
 @interface IPARCountryTableViewController ()
 @property (nonatomic) NSArray *sortedCountries;

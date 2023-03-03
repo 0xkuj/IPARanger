@@ -67,18 +67,44 @@
         
         [self.appVersion top:self.appBundle.bottomAnchor padding:0];
         [self.appVersion leading:self.appImage.trailingAnchor padding:15];    
+
+        self.appFilename = [[UILabel alloc] init];
+        self.appFilename.textColor = UIColor.tertiaryLabelColor;
+        self.appFilename.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
+        self.appFilename.textAlignment = NSTextAlignmentLeft;
+        [self.baseView addSubview:self.appFilename];
+        
+        [self.appFilename top:self.appName.bottomAnchor padding:1];
+        [self.appFilename leading:self.appImage.trailingAnchor padding:15];
+        self.appFilename.translatesAutoresizingMaskIntoConstraints = NO;
+        [self.baseView addConstraints:@[
+            [self.baseView.trailingAnchor constraintGreaterThanOrEqualToAnchor:self.appFilename.trailingAnchor constant:10],
+            [self.baseView.bottomAnchor constraintGreaterThanOrEqualToAnchor:self.appFilename.bottomAnchor constant:10]
+        ]];
+        self.appFilename.adjustsFontSizeToFitWidth = YES;
+        self.appFilename.minimumScaleFactor = 0.3; 
+        
+        self.appSize = [[UILabel alloc] init];
+        self.appSize.textColor = UIColor.tertiaryLabelColor;
+        self.appSize.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
+        self.appSize.textAlignment = NSTextAlignmentLeft;
+        [self.baseView addSubview:self.appSize];
+        
+        [self.appSize top:self.appFilename.bottomAnchor padding:0];
+        [self.appSize leading:self.appImage.trailingAnchor padding:15];  
+
     }
     
     return self;
 }
 
-//THINK ABOUT UNITING BOTH CELL CLASSES
-//UP NEXT: MOVE TO FOLDERS!
 -(void)prepareForReuse {
     [super prepareForReuse];
     self.appImage.image = nil;
     self.appName.text = nil;
     self.appBundle.text = nil;
     self.appVersion.text = nil;
+    self.appFilename.text = nil;
+    self.appSize.text = nil;
 }
 @end

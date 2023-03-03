@@ -5,7 +5,10 @@ include $(THEOS)/makefiles/common.mk
 GO_EASY_ON_ME = 1
 APPLICATION_NAME = IPARanger
 
-IPARanger_FILES = main.m $(wildcard IPAR*.m)
+SOURCES = $(shell find . -name 'IPAR*.m')
+
+IPARanger_FILES = main.m $(SOURCES)
+#IPARanger_FILES = main.m $(wildcard IPAR*.m)
 IPARanger_FRAMEWORKS = UIKit CoreGraphics
 IPARanger_CFLAGS = -fobjc-arc
 IPARanger_CODESIGN_FLAGS = -Sentitlements.plist

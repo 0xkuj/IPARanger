@@ -1,11 +1,11 @@
 #import "IPARAppDelegate.h"
 #import <Foundation/Foundation.h>
-#import "IPARLoginScreenViewController.h"
-#import "IPARUtils.h"
-#import "IPARSearchViewController.h"
-#import "IPARDownloadViewController.h"
-#import "IPARAccountAndCredits.h"
-#import "IPARConstants.h"
+#import "./Controllers/IPARLoginScreenViewController.h"
+#import "./Utils/IPARUtils.h"
+#import "./Controllers/IPARSearchViewController.h"
+#import "./Controllers/IPARDownloadViewController.h"
+#import "./Controllers/IPARAccountAndCreditsController.h"
+#import "./Extensions/IPARConstants.h"
 
 @implementation IPARAppDelegate
 
@@ -35,7 +35,6 @@
 }
 
 - (void)basicSanity {
-	#define sha256verification @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b"
     NSString *s = [IPARUtils sha256ForFileAtPath:kIpatoolScriptPath];
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         exit(0);
@@ -43,7 +42,7 @@
     if (s == nil) {
         [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"ipatool file was not found inside resources directory!" hasTextfield:NO withTextfieldBlock:nil
                         alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
-    } else if (![s isEqualToString:sha256verification]) {
+    } else if (![s isEqualToString:kSha256verification]) {
         [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"Could not verify the integrity of files" hasTextfield:NO withTextfieldBlock:nil
                         alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
     }
