@@ -57,6 +57,16 @@
     [self.view addSubview:textView];
     [textView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16].active = YES;
     [textView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+
+    UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+    versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    versionLabel.text = @"Version: 1.0.0";
+    [self.view addSubview:versionLabel];
+    [NSLayoutConstraint activateConstraints:@[
+        [versionLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [versionLabel.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-20]
+    ]];
+
 }
 
 /* provides the animation */
