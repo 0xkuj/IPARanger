@@ -1,21 +1,12 @@
 #import "IPARAccountAndCreditsController.h"
-#import "../Utils/IPARUtils.h"
 #import "IPARLoginScreenViewController.h"
 #import "../Extensions/IPARConstants.h"
-// Define constants for padding between views
-// static CGFloat const kVerticalPadding = 20.0;
-// static CGFloat const kHorizontalPadding = 16.0;
+#import "../Utils/IPARUtils.h"
 
+//those are the only one gets referenced later on
 @interface IPARAccountAndCredits ()
-@property (nonatomic, strong) UIImageView *imageView;
-@property (nonatomic, strong) UILabel *accountNameLabel;
-@property (nonatomic, strong) UILabel *emailLabel;
-@property (nonatomic, strong) UILabel *searchCountryLabel;
-@property (nonatomic, strong) UILabel *downloadCountryLabel;
-@property (nonatomic, strong) UILabel *creditsLabel;
-@property (nonatomic, strong) UILabel *lastLoginDate;
-@property (nonatomic, strong) UIButton *logoutButton;
-@property (nonatomic, strong) UIImageView *headerImageView;
+@property (nonatomic) UILabel *searchCountryLabel;
+@property (nonatomic) UILabel *downloadCountryLabel;
 @end
 
 @implementation IPARAccountAndCredits
@@ -32,50 +23,17 @@
 - (void)loadView {
     [super loadView];
 
-    // Create a scroll view that fills the entire view controller's view
     UIScrollView *scrollView = [[UIScrollView alloc] initWithFrame:self.view.bounds];
     [self.view addSubview:scrollView];
-    
-    // Create your existing view with all the labels
     UIView *contentView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 800)]; // adjust height as needed
     [scrollView addSubview:contentView];
-    
-    // Add your labels to the content view
-    UILabel *label1 = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 50)];
-    label1.text = @"Label 1";
-    [contentView addSubview:label1];
-    
-    UILabel *label2 = [[UILabel alloc] initWithFrame:CGRectMake(0, 50, self.view.bounds.size.width, 50)];
-    label2.text = @"Label 2";
-    [contentView addSubview:label2];
-    
-    // Set the content size of the scroll view to the size of your content view
     scrollView.contentSize = contentView.frame.size;
 
-    // Set the label as the background view of the table view
-    //self.view.backgroundColor = [UIColor redColor];
-
-    //Initialize the header view
     UIView *headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, [[UIScreen mainScreen] bounds].size.height)];
-    self.headerImageView = [[UIImageView alloc] initWithFrame:CGRectMake(155,120 , 80, 80)];
+    UIImageView *headerImageView = [[UIImageView alloc] initWithFrame:CGRectMake(155,120 , 80, 80)];
     UIImageSymbolConfiguration *config = [UIImageSymbolConfiguration configurationWithPointSize:40.0];
-    self.headerImageView.image = [UIImage systemImageNamed:@"person.crop.circle" withConfiguration:config];
-    self.headerImageView.translatesAutoresizingMaskIntoConstraints = NO;
-    //self.headerImageView.center = headerView.center;
-    // CAGradientLayer *gradientLayer = [CAGradientLayer layer];
-    // gradientLayer.frame = CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, headerView.frame.size.height);
-    // UIColor *lightBlue = [UIColor colorWithRed:0.15 green:0.1 blue:0.65 alpha:1.0];
-    // UIColor *lightPurple = [UIColor colorWithRed:0.5 green:0.4 blue:0.2 alpha:1.0];
-
-    // CAGradientLayer *gradientLayer = [CAGradientLayer layer];
-    // gradientLayer.frame = self.view.bounds;
-    // gradientLayer.colors = @[(id)[UIColor colorWithRed:13/255.0 green:23/255.0 blue:33/255.0 alpha:1.0].CGColor,
-    //                          (id)[UIColor colorWithRed:27/255.0 green:40/255.0 blue:56/255.0 alpha:1.0].CGColor,
-    //                          (id)[UIColor colorWithRed:40/255.0 green:57/255.0 blue:78/255.0 alpha:1.0].CGColor,
-    //                          (id)[UIColor colorWithRed:50/255.0 green:72/255.0 blue:98/255.0 alpha:1.0].CGColor];
-    // gradientLayer.startPoint = CGPointMake(0.5, 0.0);
-    // gradientLayer.endPoint = CGPointMake(0.5, 1.0);
-    // [headerView.layer insertSublayer:gradientLayer atIndex:0];
+    headerImageView.image = [UIImage systemImageNamed:@"person.crop.circle" withConfiguration:config];
+    headerImageView.translatesAutoresizingMaskIntoConstraints = NO;
     CAGradientLayer *gradientLayer = [CAGradientLayer layer];
     gradientLayer.frame = CGRectMake(0,-100,self.view.frame.size.width, 900);
     gradientLayer.colors = @[(id)[UIColor colorWithRed:58/255.0 green:97/255.0 blue:156/255.0 alpha:1.0].CGColor, (id)[UIColor colorWithRed:19/255.0 green:39/255.0 blue:70/255.0 alpha:1.0].CGColor];
@@ -83,137 +41,108 @@
     gradientLayer.startPoint = CGPointMake(0.5, 0.0);
     gradientLayer.endPoint = CGPointMake(0.5, 1.0);
     [headerView.layer insertSublayer:gradientLayer atIndex:0];
-
-    //headerView.backgroundColor =  UIColor.systemBackgroundColor;
     [contentView addSubview:headerView];
-    [contentView addSubview:self.headerImageView];
-    [self.headerImageView.centerXAnchor constraintEqualToAnchor:headerView.centerXAnchor].active = YES;
-    [self.headerImageView.topAnchor constraintEqualToAnchor:headerView.safeAreaLayoutGuide.topAnchor constant:16].active = YES;
+    [contentView addSubview:headerImageView];
 
-    self.accountNameLabel = [[UILabel alloc] init];
-    self.accountNameLabel.text = [IPARUtils getKeyFromFile:@"AccountName" defaultValueIfNil:@"N/A"];
-    self.accountNameLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [contentView addSubview:self.accountNameLabel];
-    [self.accountNameLabel.topAnchor constraintEqualToAnchor:self.headerImageView.bottomAnchor constant:16].active = YES;
-    [self.accountNameLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+    UILabel *accountNameLabel = [self createLabelWithText:[IPARUtils getKeyFromFile:@"AccountName" defaultValueIfNil:@"N/A"] fontSize:17.0];
+    [contentView addSubview:accountNameLabel];
 
-    self.emailLabel = [[UILabel alloc] init];
-    self.emailLabel.text = [IPARUtils getKeyFromFile:@"AccountEmail" defaultValueIfNil:@"N/A"];
-    self.emailLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    [contentView addSubview:self.emailLabel];
-    [self.emailLabel.topAnchor constraintEqualToAnchor:self.accountNameLabel.bottomAnchor constant:8].active = YES;
-    [self.emailLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+    UILabel *emailLabel = [self createLabelWithText:[IPARUtils getKeyFromFile:@"AccountEmail" defaultValueIfNil:@"N/A"] fontSize:17.0];
+    [contentView addSubview:emailLabel];
 
-    self.logoutButton = [[UIButton alloc] init];
-    [self.logoutButton setTitle:@"Logout" forState:UIControlStateNormal];
-    self.logoutButton.translatesAutoresizingMaskIntoConstraints = NO;
-    [self.logoutButton.titleLabel setFont:[UIFont systemFontOfSize:24.0 weight:UIFontWeightBold]];
-    [self.logoutButton setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
-    [self.logoutButton addTarget:self action:@selector(handleLogout) forControlEvents:UIControlEventTouchUpInside];
-    [contentView addSubview:self.logoutButton];
-    [self.logoutButton.topAnchor constraintEqualToAnchor:self.emailLabel.bottomAnchor constant:24].active = YES;
-    [self.logoutButton.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+    UIButton *logoutButton = [self createButtonWithImageName:nil title:@"Logout" fontSize:24.0 selectorName:@"handleLogout" frame:CGRectMake(0,0,0,0)];
+    [logoutButton.titleLabel setFont:[UIFont systemFontOfSize:24.0 weight:UIFontWeightBold]];
+    [contentView addSubview:logoutButton];
 
-    self.lastLoginDate = [[UILabel alloc] init];
-    self.lastLoginDate.text = [NSString stringWithFormat:@"Login Date: %@", [IPARUtils getKeyFromFile:@"lastLoginDate" defaultValueIfNil:@"N/A"]];
-    self.lastLoginDate.translatesAutoresizingMaskIntoConstraints = NO;
-    [contentView addSubview:self.lastLoginDate];
-    [self.lastLoginDate.topAnchor constraintEqualToAnchor:self.emailLabel.bottomAnchor constant:96].active = YES;
-    [self.lastLoginDate.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
+    UILabel *lastLoginDate = [self createLabelWithText:[NSString stringWithFormat:@"Login Date: %@", [IPARUtils getKeyFromFile:@"lastLoginDate" defaultValueIfNil:@"N/A"]] fontSize:17.0];
+    [contentView addSubview:lastLoginDate];
 
-    self.searchCountryLabel = [[UILabel alloc] init];
     NSString *searchCountry = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
-    self.searchCountryLabel.text = [NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry];
-    self.searchCountryLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.searchCountryLabel = [self createLabelWithText:[NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry] fontSize:17.0];
     [contentView addSubview:self.searchCountryLabel];
-    [self.searchCountryLabel.topAnchor constraintEqualToAnchor:self.lastLoginDate.bottomAnchor constant:16].active = YES;
-    [self.searchCountryLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
-    
-    self.downloadCountryLabel = [[UILabel alloc] init];
+
     NSString *downloadCountry = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
-    self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:downloadCountry], downloadCountry];
-    self.downloadCountryLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.downloadCountryLabel = [self createLabelWithText:[NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:downloadCountry], downloadCountry] fontSize:17.0];
     [contentView addSubview:self.downloadCountryLabel];
-    [self.downloadCountryLabel.topAnchor constraintEqualToAnchor:self.searchCountryLabel.bottomAnchor constant:16].active = YES;
-    [self.downloadCountryLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16].active = YES;
 
-
-    UILabel *createdByLabel = [[UILabel alloc] init];
-    createdByLabel.text = @"Created by 0xkuj";
-    createdByLabel.font = [UIFont boldSystemFontOfSize:24];
-    createdByLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *createdByLabel = [self createLabelWithText:@"Created by 0xkuj" fontSize:24];
     [contentView addSubview:createdByLabel];
-    [createdByLabel.topAnchor constraintEqualToAnchor:self.downloadCountryLabel.bottomAnchor constant:32].active = YES;
-    [createdByLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
-    UIButton *followMeTwitter = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 150, 50)];
-    [followMeTwitter setTitle:@"Follow Me On Twitter" forState:UIControlStateNormal];
-    [followMeTwitter setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
-    followMeTwitter.titleLabel.font = [UIFont systemFontOfSize:16.0];
-    [followMeTwitter sizeToFit]; // resize button to fit title
-    [followMeTwitter setImage:[UIImage imageNamed:@"Twitter@2x.png"] forState:UIControlStateNormal];
-    [followMeTwitter addTarget:self action:@selector(openTW) forControlEvents:UIControlEventTouchUpInside];
-     followMeTwitter.translatesAutoresizingMaskIntoConstraints = NO;
-    [followMeTwitter setImageEdgeInsets:UIEdgeInsetsMake(0, -30, 0, 0)]; // shift image left by 10 points
-    [followMeTwitter setTitleEdgeInsets:UIEdgeInsetsMake(0, -20, 0, 0)]; // shift text right by 10 points
+    UIButton *followMeTwitter = [self createButtonWithImageName:@"Twitter@2x.png" title:@"Follow Me On Twitter" fontSize:16.0 selectorName:@"openTW" frame:CGRectMake(0,0,150,50)];
     [contentView addSubview:followMeTwitter];
-    [followMeTwitter.topAnchor constraintEqualToAnchor:createdByLabel.bottomAnchor constant:16].active = YES;
-    [followMeTwitter.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
-    UIButton *buyMeCoffeePP = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 300, 50)];
-    [buyMeCoffeePP setTitle:@"Buy me a coffee" forState:UIControlStateNormal];
-    [buyMeCoffeePP setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
-    buyMeCoffeePP.titleLabel.font = [UIFont systemFontOfSize:16.0];
-    [buyMeCoffeePP sizeToFit]; // resize button to fit title
-    [buyMeCoffeePP setImage:[UIImage imageNamed:@"donate@2x.png"] forState:UIControlStateNormal];
-    [buyMeCoffeePP addTarget:self action:@selector(openPP) forControlEvents:UIControlEventTouchUpInside];
-    buyMeCoffeePP.translatesAutoresizingMaskIntoConstraints = NO;
-    [buyMeCoffeePP setImageEdgeInsets:UIEdgeInsetsMake(0, -30, 0, 0)]; // shift image left by 10 points
-    [buyMeCoffeePP setTitleEdgeInsets:UIEdgeInsetsMake(0, -20, 0, 0)]; // shift text right by 10 points
-    buyMeCoffeePP.titleLabel.lineBreakMode = NSLineBreakByTruncatingTail; 
+    UIButton *buyMeCoffeePP = [self createButtonWithImageName:@"donate@2x.png" title:@"Buy me a coffee" fontSize:16.0 selectorName:@"openPP" frame:CGRectMake(0,0,300,50)];
+    //buyMeCoffeePP.titleLabel.lineBreakMode = NSLineBreakByTruncatingTail; 
     [contentView addSubview:buyMeCoffeePP];
-    [buyMeCoffeePP.topAnchor constraintEqualToAnchor:followMeTwitter.bottomAnchor constant:16].active = YES;
-    [buyMeCoffeePP.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
-    UIButton *followMeGithub = [[UIButton alloc] initWithFrame:CGRectMake(0, 0, 150, 50)];
-    [followMeGithub setTitle:@"My GitHub" forState:UIControlStateNormal];
-    [followMeGithub setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
-    followMeGithub.titleLabel.font = [UIFont systemFontOfSize:16.0];
-    [followMeGithub sizeToFit]; // resize button to fit title
-    [followMeGithub setImage:[UIImage imageNamed:@"GitHub@2x.png"] forState:UIControlStateNormal];
-    [followMeGithub addTarget:self action:@selector(openGithub) forControlEvents:UIControlEventTouchUpInside];
-    followMeGithub.translatesAutoresizingMaskIntoConstraints = NO;
-    [followMeGithub setImageEdgeInsets:UIEdgeInsetsMake(0, -30, 0, 0)]; // shift image left by 10 points
-    [followMeGithub setTitleEdgeInsets:UIEdgeInsetsMake(0, -20, 0, 0)]; // shift text right by 10 points
+    UIButton *followMeGithub = [self createButtonWithImageName:@"GitHub@2x.png" title:@"My GitHub" fontSize:16.0 selectorName:@"openGithub" frame:CGRectMake(0,0,150,50)];
     [contentView addSubview:followMeGithub];
-    [followMeGithub.topAnchor constraintEqualToAnchor:buyMeCoffeePP.bottomAnchor constant:16].active = YES;
-    [followMeGithub.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
-    UILabel *credits = [[UILabel alloc] init];
-    credits.text = @"Special Thanks";
-    credits.font = [UIFont boldSystemFontOfSize:24];
-    credits.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *credits = [self createLabelWithText:@"Special Thanks" fontSize:24.0];
     [contentView addSubview:credits];
-    [credits.topAnchor constraintEqualToAnchor:buyMeCoffeePP.bottomAnchor constant:82].active = YES;
-    [credits.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
-    UILabel *majdLabel = [[UILabel alloc] init];
-    majdLabel.text = @"Majd Alfhaily (ipatool)";
-    majdLabel.font = [UIFont boldSystemFontOfSize:14.0];
-    majdLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *majdLabel = [self createLabelWithText:@"Majd Alfhaily (ipatool)" fontSize:14.0];
     [contentView addSubview:majdLabel];
-    [majdLabel.topAnchor constraintEqualToAnchor:credits.bottomAnchor constant:8].active = YES;
-    [majdLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
-    UILabel *angelXwindLabel = [[UILabel alloc] init];
-    angelXwindLabel.text = @"angelXwind (appinst)";
-    angelXwindLabel.font = [UIFont boldSystemFontOfSize:14.0];
-    angelXwindLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    UILabel *angelXwindLabel = [self createLabelWithText:@"angelXwind (appinst)" fontSize:14.0];
     [contentView addSubview:angelXwindLabel];
-    [angelXwindLabel.topAnchor constraintEqualToAnchor:majdLabel.bottomAnchor constant:8].active = YES;
-    [angelXwindLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
 
+
+    [NSLayoutConstraint activateConstraints:@[
+        [headerImageView.centerXAnchor constraintEqualToAnchor:headerView.centerXAnchor],
+        [headerImageView.topAnchor constraintEqualToAnchor:headerView.safeAreaLayoutGuide.topAnchor constant:16],
+        [accountNameLabel.topAnchor constraintEqualToAnchor:headerImageView.bottomAnchor constant:16],
+        [accountNameLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [emailLabel.topAnchor constraintEqualToAnchor:accountNameLabel.bottomAnchor constant:8],
+        [emailLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [logoutButton.topAnchor constraintEqualToAnchor:emailLabel.bottomAnchor constant:24],
+        [logoutButton.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [lastLoginDate.topAnchor constraintEqualToAnchor:emailLabel.bottomAnchor constant:96],
+        [lastLoginDate.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+        [self.searchCountryLabel.topAnchor constraintEqualToAnchor:lastLoginDate.bottomAnchor constant:16],
+        [self.searchCountryLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+        [self.downloadCountryLabel.topAnchor constraintEqualToAnchor:self.searchCountryLabel.bottomAnchor constant:16],
+        [self.downloadCountryLabel.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+        [createdByLabel.topAnchor constraintEqualToAnchor:self.downloadCountryLabel.bottomAnchor constant:32],
+        [createdByLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [followMeTwitter.topAnchor constraintEqualToAnchor:createdByLabel.bottomAnchor constant:16],
+        [followMeTwitter.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [buyMeCoffeePP.topAnchor constraintEqualToAnchor:followMeTwitter.bottomAnchor constant:16],
+        [buyMeCoffeePP.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [followMeGithub.topAnchor constraintEqualToAnchor:buyMeCoffeePP.bottomAnchor constant:16],
+        [followMeGithub.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [credits.topAnchor constraintEqualToAnchor:buyMeCoffeePP.bottomAnchor constant:82],
+        [credits.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [majdLabel.topAnchor constraintEqualToAnchor:credits.bottomAnchor constant:8],
+        [majdLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [angelXwindLabel.topAnchor constraintEqualToAnchor:majdLabel.bottomAnchor constant:8],
+        [angelXwindLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor]
+    ]];
+    
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
+}
+
+- (UIButton *)createButtonWithImageName:(NSString *)imageName title:(NSString *)title fontSize:(CGFloat)fontSize selectorName:(NSString *)selectorName frame:(CGRect)frame {
+    SEL selector = NSSelectorFromString(selectorName);
+    UIButton *button = [[UIButton alloc] initWithFrame:frame];
+    [button setTitle:title forState:UIControlStateNormal];
+    [button setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
+    button.titleLabel.font = [UIFont systemFontOfSize:fontSize];
+    [button sizeToFit];
+    [button setImage:[UIImage imageNamed:imageName] forState:UIControlStateNormal];
+    [button addTarget:self action:selector forControlEvents:UIControlEventTouchUpInside];
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    [button setImageEdgeInsets:UIEdgeInsetsMake(0, -30, 0, 0)]; // shift image left by 10 points
+    [button setTitleEdgeInsets:UIEdgeInsetsMake(0, -20, 0, 0)]; // shift text right by 10 points
+    return button;
+}
+
+-(UILabel *)createLabelWithText:(NSString *)text fontSize:(CGFloat)fontSize {
+    UILabel *label = [[UILabel alloc] init];
+    label.text = text;
+    label.font = [UIFont boldSystemFontOfSize:fontSize];
+    label.translatesAutoresizingMaskIntoConstraints = NO;
+    return label;
 }
 
 - (void)updateCountry {

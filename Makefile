@@ -8,7 +8,6 @@ APPLICATION_NAME = IPARanger
 SOURCES = $(shell find . -name 'IPAR*.m')
 
 IPARanger_FILES = main.m $(SOURCES)
-#IPARanger_FILES = main.m $(wildcard IPAR*.m)
 IPARanger_FRAMEWORKS = UIKit CoreGraphics
 IPARanger_CFLAGS = -fobjc-arc
 IPARanger_CODESIGN_FLAGS = -Sentitlements.plist
