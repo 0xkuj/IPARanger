@@ -1,5 +1,6 @@
 #import "IPARCountryTableViewController.h"
 #import "../Utils/IPARUtils.h"
+#import "../Extensions/IPARConstants.h"
 
 @interface IPARCountryTableViewController ()
 @property (nonatomic) NSArray *sortedCountries;
@@ -92,9 +93,9 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
      NSString *countryCode = [self localeForFullCountryName:self.filteredCountries[indexPath.row]];
      if ([self.viewControllerCaller isEqualToString:@"Downloader"]) {
-        [IPARUtils saveKeyToFile:@"AccountCountryDownload" withValue:countryCode];
+        [IPARUtils saveKeyToFile:kCountryDownloadKeyFromFile withValue:countryCode];
      } else if ([self.viewControllerCaller isEqualToString:@"Search"]) {
-        [IPARUtils saveKeyToFile:@"AccountCountrySearch" withValue:countryCode];
+        [IPARUtils saveKeyToFile:kCountrySearchKeyFromFile withValue:countryCode];
      }
     
      self.searchController.searchBar.text = nil;

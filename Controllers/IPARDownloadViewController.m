@@ -28,7 +28,7 @@
     self = [super init];
     if (self) {
         self.title = @"Download";
-		self.tabBarItem.image = [UIImage systemImageNamed:@"square.stack.3d.up"];
+		self.tabBarItem.image = [UIImage systemImageNamed:kTabbarDownloadingSectionSystemImage];
 		self.tabBarItem.title = @"Download";
     }
     return self;
@@ -56,7 +56,7 @@
     self.tableView.backgroundView = _noDataLabel;
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
-    _lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
+    _lastCountrySelected = [IPARUtils getKeyFromFile:kCountryDownloadKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
     _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
@@ -115,7 +115,7 @@
 }
 
 - (void)updateCountry {
-    self.lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
+    self.lastCountrySelected = [IPARUtils getKeyFromFile:kCountryDownloadKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
     self.countryButton.title = [NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
@@ -140,7 +140,7 @@
     NSDictionary *attributes = @{NSFontAttributeName:font};
     [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
     [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                      
-    UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"square.and.arrow.down.on.square.fill"] style:UIBarButtonItemStylePlain target:self action:@selector(downloadButtonTapped:)];
+    UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:kDownloadSystemImage] style:UIBarButtonItemStylePlain target:self action:@selector(downloadButtonTapped:)];
     self.navigationItem.rightBarButtonItems = @[deleteAllButton, downloadButton];
 }
 
@@ -156,7 +156,7 @@
             // Delete the file from the data source
             NSError *error;
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
-            BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, self.existingApps[indexPath.row][@"filename"]] error:&error];
+            BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, self.existingApps[indexPath.row][kFilenameIndex]] error:&error];
             if (success == NO) {
                 NSLog(@"Error deleting file: %@", error);
             } 
@@ -173,7 +173,7 @@
     };
 
     NSString *confirmation = @"You are about to all downloaded IPAs\n\nThis operation cannot be undone\nAre you sure?";
-    [IPARUtils presentDialogWithTitle:@"IPARanger\nDelete Files" message:confirmation hasTextfield:NO withTextfieldBlock:nil
+    [IPARUtils presentDialogWithTitle:kIPARangerDeleteFilesHeadline message:confirmation hasTextfield:NO withTextfieldBlock:nil
                     alertConfirmationBlock:alertBlockConfirm withConfirmText:@"YES" alertCancelBlock:alertCancelBlock withCancelText:@"Cancel" presentOn:self];
 }
 
@@ -200,10 +200,10 @@
     if (error) {
         return;
     }
-
-    NSPredicate *predicate = [NSPredicate predicateWithFormat:@"self ENDSWITH '.ipa'"];
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:kPredicateIPAApps];
     NSArray *ipaFiles = [files filteredArrayUsingPredicate:predicate];
-    [self.existingApps removeAllObjects];;
+    [self.existingApps removeAllObjects];
+
     for (NSString *fileName in ipaFiles) {
         NSString *filePath = [kIPARangerDocumentsPath stringByAppendingPathComponent:fileName];
         NSDictionary *attributes = [fileManager attributesOfItemAtPath:filePath error:&error];
@@ -213,14 +213,16 @@
         long long fileSize = [attributes fileSize];
         NSString *humanReadableSize = [IPARUtils humanReadableSizeForBytes:fileSize];
         NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName];
-        // Load the Info.plist file from the IPA file
         NSString *str = @"\"%s (%s)\\n\"";
         //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"unzip -p '%@' Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(DisplayName|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'", ipaFilePath, str]];
-        NSString *appName = @"N/A";
-        NSString *bundleName = @"N/A";
+        //we extract the info.plist file into temp folder since we dont know the bundle yet. unzip -p caused issues with formatting!
+        NSString *tempDir = [NSString stringWithFormat:@"%@cacheDir/TEMP/", kIPARangerDocumentsPath];
+        [self extractInfoPlistFromIPA:ipaFilePath toFolder:tempDir];
+
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:kCatDisplaynameAndIdentifierFromInfo, tempDir, str]];
+        NSString *appName = kUnknownValue;
+        NSString *bundleName = kUnknownValue;
         if ([standardAndErrorOutputs[kstdOutput] count] > 2) {
-            // sometimes info.plist contains CFBundleName first, and sometimes the opposite. thats why we are doing this
             if ([standardAndErrorOutputs[kstdOutput][0] containsString:@"CFBundleDisplayName"]) {
                 appName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
                 bundleName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][1]];
@@ -229,15 +231,20 @@
                 bundleName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
             }
         }
-        NSString *tempDir = [NSString stringWithFormat:@"%@tmp/%@/", kIPARangerDocumentsPath, bundleName];
-        if ([fileManager fileExistsAtPath:tempDir] == NO) {
-            [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
+
+        NSString *cacheDir = [NSString stringWithFormat:@"%@cacheDir/%@/", kIPARangerDocumentsPath, bundleName];
+        if ([fileManager fileExistsAtPath:cacheDir] == NO) {
+            [fileManager createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
         }
-        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName] bundleId:bundleName tempDir:tempDir];
+        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:kCacheInfoPlist, tempDir, cacheDir]];
+
+        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName] tempDir:cacheDir];
         if (appImage == nil) {
-            appImage = [UIImage systemImageNamed:@"questionmark.diamond.fill"];
+            appImage = [UIImage systemImageNamed:kUnknownSystemImage];
         }
-        [self.existingApps addObject:@{@"filename": fileName, @"size": humanReadableSize, @"appname" : appName, @"appimage" : appImage}];
+        [self.existingApps addObject:@{kFilenameIndex: fileName, kSizeIndex: humanReadableSize, kAppnameIndex : appName, kAppimageIndex : appImage}];
+        //remove the TEMP folder, we do not need that until next file.
+        [fileManager removeItemAtPath:tempDir error:nil];
     }
 }
 
@@ -245,7 +252,7 @@
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         self.lastBundleDownload = textField.text;
         if (self.lastBundleDownload == nil || [self.lastBundleDownload stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
-            [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"Bundle ID cannot be empty" hasTextfield:NO withTextfieldBlock:nil
+            [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Bundle ID cannot be empty" hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
         }
         [self showDownloadDialog];
@@ -256,7 +263,7 @@
                                             name:NSFileHandleDataAvailableNotification
                                             object:nil];
         
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ download --bundle-identifier %@ -o %@ --purchase -c %@", kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, self.lastCountrySelected];
+        NSString *commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, self.lastCountrySelected];
         //here we dont deal with errors since 'download' keyword throws notification
         [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     };
@@ -265,7 +272,7 @@
         textField.placeholder = @"e.g com.facebook.Facebook";
     };
 
-    [IPARUtils presentDialogWithTitle:@"IPARanger - Download" message:@"Enter App Bundle ID" hasTextfield:YES withTextfieldBlock:alertBlockTextfield
+    [IPARUtils presentDialogWithTitle:kIPARangerDownloadPromptHeadline message:@"Enter App Bundle ID" hasTextfield:YES withTextfieldBlock:alertBlockTextfield
                     alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Download" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 
 }
@@ -288,29 +295,24 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    IPARAppCell *cell = [tableView dequeueReusableCellWithIdentifier:@"IPARAppCell"];
+    IPARAppCell *cell = [tableView dequeueReusableCellWithIdentifier:kIPARCell];
         
     if (cell == nil) {
-        cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"IPARAppCell"];
+        cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kIPARCell];
     }
     if (indexPath.row < self.existingApps.count) {
         UIView *selectionView = [UIView new];
         selectionView.backgroundColor = UIColor.clearColor;
         [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
         cell.backgroundColor = UIColor.clearColor;
-        cell.appName.text = self.existingApps[indexPath.row][@"appname"];
-        cell.appFilename.text = self.existingApps[indexPath.row][@"filename"];
-        cell.appSize.text = [NSString stringWithFormat:@"%@", self.existingApps[indexPath.row][@"size"]];
-        cell.appImage.image = self.existingApps[indexPath.row][@"appimage"];         
+        cell.appName.text = self.existingApps[indexPath.row][kAppnameIndex];
+        cell.appFilename.text = self.existingApps[indexPath.row][kFilenameIndex];
+        cell.appSize.text = [NSString stringWithFormat:@"%@", self.existingApps[indexPath.row][kSizeIndex]];
+        cell.appImage.image = self.existingApps[indexPath.row][kAppimageIndex];         
     }
 
     return cell;
 }
-
-// - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
-// 	//[self.searchResults removeObjectAtIndex:indexPath.row];
-// 	[tableView deleteRowsAtIndexPaths:@[ indexPath ] withRowAnimation:UITableViewRowAnimationAutomatic];
-// }
 
 #pragma mark - Table View Delegate
 
@@ -322,22 +324,22 @@
     
     // Create actions
     UIAlertAction *openInFilzaAction = [UIAlertAction actionWithTitle:@"Open in Filza" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-       [self openInFilza:self.existingApps[indexPath.row][@"filename"]];
+       [self openInFilza:self.existingApps[indexPath.row][kFilenameIndex]];
     }];
     UIAlertAction *shareAction = [UIAlertAction actionWithTitle:@"Share" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        [self shareFile:self.existingApps[indexPath.row][@"filename"]];
+        [self shareFile:self.existingApps[indexPath.row][kFilenameIndex]];
         
     }];
     UIAlertAction *renameAction = [UIAlertAction actionWithTitle:@"Rename File" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        [self renameFileAtPath:self.existingApps[indexPath.row][@"filename"]];
+        [self renameFileAtPath:self.existingApps[indexPath.row][kFilenameIndex]];
         
     }];
     UIAlertAction *installApplicationAction = [UIAlertAction actionWithTitle:@"Install Application" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-        [self installApplication:self.existingApps[indexPath.row][@"filename"] appName:self.existingApps[indexPath.row][@"appname"]];
+        [self installApplication:self.existingApps[indexPath.row][kFilenameIndex] appName:self.existingApps[indexPath.row][kAppnameIndex]];
     }];
 
     UIAlertAction *deleteAction = [UIAlertAction actionWithTitle:@"Delete" style:UIAlertActionStyleDestructive handler:^(UIAlertAction * _Nonnull action) {
-        [self deleteFile:self.existingApps[indexPath.row][@"filename"] index:indexPath];
+        [self deleteFile:self.existingApps[indexPath.row][kFilenameIndex] index:indexPath];
     }];
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
     
@@ -356,7 +358,7 @@
 - (void)installApplication:(NSString *)ipaFilePath appName:(NSString *)appName {
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         __block NSDictionary *standardAndErrorOutputs = [NSDictionary dictionary];
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"IPARanger\nInstallation\n"
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:kIPARangerInstallationHeadline
                                                                     message:[NSString stringWithFormat:@"\n\n\nInstalling Application '%@'", appName]
                                                                 preferredStyle:UIAlertControllerStyleAlert];
                                                                 
@@ -369,7 +371,7 @@
                 if ([obj containsString:@"Successfully installed"]) {
                     dispatch_async(dispatch_get_main_queue(), ^{
                         [self dismissViewControllerAnimated:YES completion:^{
-                            [IPARUtils presentDialogWithTitle:@"IPARanger\nSuccess!" message:[NSString stringWithFormat:@"Successfully installed '%@'!", appName] hasTextfield:NO withTextfieldBlock:nil
+                            [IPARUtils presentDialogWithTitle:kIPARangerSuccessMessage message:[NSString stringWithFormat:@"Successfully installed '%@'!", appName] hasTextfield:NO withTextfieldBlock:nil
                                 alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
                         }];
                         return;
@@ -378,7 +380,7 @@
             }   
             dispatch_async(dispatch_get_main_queue(), ^{
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:[NSString stringWithFormat:@"Error occurred while trying to install '%@'", appName] hasTextfield:NO withTextfieldBlock:nil
+                        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:[NSString stringWithFormat:@"Error occurred while trying to install '%@'", appName] hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
                 }];
             });
@@ -390,54 +392,38 @@
                             alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Yes, Continue" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 }
 
-- (NSArray *)retrieveBundlesInTmpFolder {
-    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@tmp/", kIPARangerDocumentsPath]];
-    NSMutableArray *bundles = [NSMutableArray array];
-    for (NSString *bundle in standardAndErrorOutputs[kstdOutput]) {
-        if ([bundle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length > 0) {
-            [bundles addObject:bundle];
-        }   
-    }
-    return bundles;
+- (void)extractInfoPlistFromIPA:(NSString *)ipaFilePath toFolder:(NSString*)tempDir {
+    [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
+    [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:@"Info.plist"];
 }
 
-- (UIImage *)getAppIconFromIPAFile:(NSString *)ipaFilePath bundleId:(NSString *)bundleName tempDir:(NSString *)tempDir {
+- (UIImage *)getAppIconFromIPAFile:(NSString *)ipaFilePath tempDir:(NSString *)tempDir {
     NSFileManager *fileManager = [NSFileManager defaultManager];
-    if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@Info.plist",tempDir]] == NO) {
-        [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:@"Info.plist"];
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@Payload/", tempDir]];
-        NSString *appFolder = standardAndErrorOutputs[kstdOutput][0];
-        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/Info.plist %@", tempDir, appFolder, tempDir]];
-    } 
-
     NSString *infoPlistPath = [tempDir stringByAppendingPathComponent:@"Info.plist"];
     NSDictionary *infoPlist = [NSDictionary dictionaryWithContentsOfFile:infoPlistPath];
     NSString *iconFileName = infoPlist[@"CFBundleIcons"][@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"][0];
 
     if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@%@@2x.png", tempDir, iconFileName]] == NO) {
         [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"ls %@Payload/", tempDir]];
-        NSString *appFolder = standardAndErrorOutputs[kstdOutput][0];
-        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"mv %@Payload/%@/%@@2x.png %@", tempDir, appFolder, iconFileName, tempDir]];
+        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:kCacheAppImage, tempDir, iconFileName, tempDir]];
     }
-
     // Read the icon file and create a UIImage
     NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
     NSData *iconData = [NSData dataWithContentsOfFile:iconFilePath];
     UIImage *iconImage = [UIImage imageWithData:iconData];
-    [[NSFileManager defaultManager] removeItemAtPath:[NSString stringWithFormat:@"%@/Payload", tempDir] error:nil];
+    [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@/Payload", tempDir] error:nil];
     
     return iconImage;
 }
 
 - (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
     UIContextualAction *deleteAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive title:@"Delete" handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
-        [self deleteFile:self.existingApps[indexPath.row][@"filename"] index:indexPath];
+        [self deleteFile:self.existingApps[indexPath.row][kFilenameIndex] index:indexPath];
     }];
     
-    UIImage *shareImage = [UIImage systemImageNamed:@"square.and.arrow.up"];
+    UIImage *shareImage = [UIImage systemImageNamed:kShareSystemImage];
     UIContextualAction *shareAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:@"Share" handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {        // Share the file using a UIActivityViewController
-        [self shareFile:self.existingApps[indexPath.row][@"filename"]];
+        [self shareFile:self.existingApps[indexPath.row][kFilenameIndex]];
     }];
     shareAction.image = shareImage;
     shareAction.backgroundColor = [UIColor blueColor];
@@ -466,8 +452,8 @@
         }
     };
 
-    NSString *confirmation = [NSString stringWithFormat:@"You are about to delete file: %@\n\nAre you sure?", self.existingApps[indexPath.row][@"filename"]];
-    [IPARUtils presentDialogWithTitle:@"IPARanger\nDelete File" message:confirmation hasTextfield:NO withTextfieldBlock:nil
+    NSString *confirmation = [NSString stringWithFormat:@"You are about to delete file: %@\n\nAre you sure?", self.existingApps[indexPath.row][kFilenameIndex]];
+    [IPARUtils presentDialogWithTitle:kIPARangerDeleteFileHeadline message:confirmation hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:alertBlockConfirm withConfirmText:@"YES" alertCancelBlock:alertBlockCancel withCancelText:@"Cancel" presentOn:self];
 }
 
@@ -481,7 +467,7 @@
 
 - (void)openInFilza:(NSString *)pathToFile {
 	UIApplication *application = [UIApplication sharedApplication];
-	NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:@"filza://%@%@", kIPARangerDocumentsPath, pathToFile]];
+	NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:kFilzaScheme, kIPARangerDocumentsPath, pathToFile]];
 	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
 }
 
@@ -493,15 +479,26 @@
     
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         NSString *newFileName = textField.text;
-        if (![newFileName isEqualToString:currentFileName]) {
-            NSString *newFilePath = [currentDirectoryPath stringByAppendingPathComponent:newFileName];
-            NSError *error = nil;
-            BOOL success = [fileManager moveItemAtPath:fullPath toPath:newFilePath error:&error];
-            if (success) {
-                NSLog(@"File renamed successfully.");
-                [self refreshTableData];
+        //change filename only if different from old one
+        if ([newFileName isEqualToString:currentFileName] == NO) {
+            AlertActionBlockWithTextField alertBlockWarningConfirm = ^(UITextField *textField) {
+                NSString *newFilePath = [currentDirectoryPath stringByAppendingPathComponent:newFileName];
+                NSError *error = nil;
+                BOOL success = [fileManager moveItemAtPath:fullPath toPath:newFilePath error:&error];
+                if (success) {
+                    [self refreshTableData];
+                } else {
+                    NSLog(@"Error renaming file: %@", error);
+                    [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"There was an error trying to rename your file\nCheck your filename and try again" hasTextfield:NO withTextfieldBlock:nil
+                    alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+                }
+            };
+
+            if ([newFileName hasSuffix:@".ipa"] == NO) {
+                [IPARUtils presentDialogWithTitle:kIPARangerWarningHeadline message:@"Your IPA file does not end with '.ipa' extension.\nDo you wish to continue?" hasTextfield:NO withTextfieldBlock:nil
+                    alertConfirmationBlock:alertBlockWarningConfirm withConfirmText:@"Yes" alertCancelBlock:nil withCancelText:@"No" presentOn:self];
             } else {
-                NSLog(@"Error renaming file: %@", error);
+                alertBlockWarningConfirm(nil);
             }
         }
     };
@@ -511,7 +508,7 @@
         textField.text = currentFileName;
     };
 
-    [IPARUtils presentDialogWithTitle:@"IPARanger\nRename File\n\nDont forget to add '.ipa' at the end of your file" message:nil hasTextfield:YES withTextfieldBlock:alertBlockTextfield
+    [IPARUtils presentDialogWithTitle:[NSString stringWithFormat:@"%@\n\nDont forget to add '.ipa' at the end of your file", kIPARangerRenameFileHeadline] message:nil hasTextfield:YES withTextfieldBlock:alertBlockTextfield
                 alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Rename" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 }
 
@@ -550,7 +547,7 @@
 
 - (void)showDownloadDialog {
     // Create a UIAlertController with a custom view
-    self.downloadAlertController.title = @"IPARanger\nDownloading..";
+    self.downloadAlertController.title = kIPARangerDownloadingMessage;
     self.downloadAlertController.message = [NSString stringWithFormat:@"Downloading requested bundle: %@\n\n", self.lastBundleDownload];
     self.progressView.frame = CGRectMake(15, 120, 230, 5);
     [self.downloadAlertController.view addSubview:self.progressView];
@@ -570,7 +567,7 @@
                [errorMessage.lowercaseString rangeOfString:login.lowercaseString].location != NSNotFound || 
                [errorMessage.lowercaseString rangeOfString:authentication.lowercaseString].location != NSNotFound) {
         errorForDialog = @"There was an issue with your token\nPlease logout and then login again with your account and try again";
-        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:errorForDialog hasTextfield:NO withTextfieldBlock:nil
+        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:errorForDialog hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:[self getAlertBlockForLogout] withConfirmText:@"Logout" alertCancelBlock:nil withCancelText:nil presentOn:self];
         return;
     } else if ([errorMessage.lowercaseString rangeOfString:cantFindApp.lowercaseString].location != NSNotFound)
@@ -579,7 +576,7 @@
     } else {
         errorForDialog = errorMessage;
     }
-    [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:errorForDialog hasTextfield:NO withTextfieldBlock:nil
+    [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:errorForDialog hasTextfield:NO withTextfieldBlock:nil
                     alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
 }        
 

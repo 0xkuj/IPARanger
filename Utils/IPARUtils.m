@@ -37,6 +37,7 @@ int spawnedProcessPid;
 }
 
 + (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip {
+    
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath:kLaunchPathUnzip];
     [task setArguments:@[ipaFilePath, [NSString stringWithFormat:@"Payload/*.app/%@", fileToUnzip]]];
@@ -95,13 +96,13 @@ int spawnedProcessPid;
 + (void)accountDetailsToFile:(NSString *)userEmail authName:(NSString *)authName authenticated:(NSString *)authenticated {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:kIPARangerSettingsDict]];
-    settings[@"AccountEmail"] = userEmail;
-    settings[@"AccountName"] = [self parseLoginNameFromAuthString:authName];
-    settings[@"Authenticated"] = authenticated;
+    settings[kAccountEmailKeyFromFile] = userEmail;
+    settings[kAccountNameKeyFromFile] = [self parseLoginNameFromAuthString:authName];
+    settings[kAuthenticatedKeyFromFile] = authenticated;
     if ([authenticated isEqualToString:@"NO"]) {
-        settings[@"lastLogoutDate"] = [NSDate date];
+        settings[kLastLogoutDateKeyFromFile] = [NSDate date];
     } else {
-        settings[@"lastLoginDate"] = [NSDate date];
+        settings[kLastLoginDateKeyFromFile] = [NSDate date];
     }
     [settings writeToFile:kIPARangerSettingsDict atomically:YES];
 }
@@ -109,7 +110,7 @@ int spawnedProcessPid;
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode {
     //our fallback country
     if (countryCode.length != 2) {
-        countryCode = @"US";
+        countryCode = kDefaultInitialCountry;
     }
 
     int base = 127462 -65;
@@ -139,7 +140,7 @@ int spawnedProcessPid;
 
 
 + (UIImage *)getAppIconFromApple:(NSString *)bundleId {
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/lookup?bundleId=%@", bundleId]];
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:kItunesImagesForBundleURL, bundleId]];
     NSData *data = [NSData dataWithContentsOfURL:url];
 
     if (data) {
@@ -148,7 +149,7 @@ int spawnedProcessPid;
         
         if (results.count > 0) {
             NSDictionary *appInfo = results[0];
-            NSString *iconUrlString = appInfo[@"artworkUrl100"];
+            NSString *iconUrlString = appInfo[kItunesImagesForBundleAnswerField];
             NSURL *iconUrl = [NSURL URLWithString:iconUrlString];
             NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
             UIImage *iconImage = [UIImage imageWithData:iconData];

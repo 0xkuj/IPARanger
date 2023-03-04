@@ -24,7 +24,7 @@
     self = [super init];
     if (self) {
        	self.title = @"Search";
-		self.tabBarItem.image = [UIImage systemImageNamed:@"magnifyingglass"];
+		self.tabBarItem.image = [UIImage systemImageNamed:kTabbarSearchingSectionSystemImage];
 		self.tabBarItem.title = @"Search";
     }
     return self;
@@ -58,7 +58,7 @@
 }
 
 - (void)setupCountryButton {
-    _lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
+    _lastCountrySelected = [IPARUtils getKeyFromFile:kCountrySearchKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
     _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
@@ -76,7 +76,7 @@
 }
 
 - (void)updateCountry {
-    self.lastCountrySelected = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
+    self.lastCountrySelected = [IPARUtils getKeyFromFile:kCountrySearchKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
     self.countryButton.title = [NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];  
@@ -85,7 +85,7 @@
 
 - (void)_setUpNavigationBar
 {
-    UIBarButtonItem *lookupButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"magnifyingglass"] style:UIBarButtonItemStylePlain target:self action:@selector(searchButtonTapped:)];
+    UIBarButtonItem *lookupButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:kTabbarSearchingSectionSystemImage] style:UIBarButtonItemStylePlain target:self action:@selector(searchButtonTapped:)];
     self.navigationItem.rightBarButtonItems = @[lookupButton];
 }
 
@@ -97,7 +97,7 @@
         }
         
         if (self.latestSearchTerm == nil || [self.latestSearchTerm stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
-            [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"App Name cannot be empty" hasTextfield:NO withTextfieldBlock:nil
+            [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"App Name cannot be empty" hasTextfield:NO withTextfieldBlock:nil
              alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
             return;
         }    
@@ -108,7 +108,7 @@
         textField.placeholder = @"e.g - Netflix";
     };
 
-    [IPARUtils presentDialogWithTitle:@"IPARanger - Search" message:@"Enter App Name" hasTextfield:YES withTextfieldBlock:textFieldBlock alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Search" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
+    [IPARUtils presentDialogWithTitle:kIPARangerSearchPromptHeadline message:@"Enter App Name" hasTextfield:YES withTextfieldBlock:textFieldBlock alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Search" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 }
 
 - (void)runSearchCommand {
@@ -127,7 +127,7 @@
     [self presentViewController:alert animated:YES completion:nil];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:@"/Applications/IPARanger.app/ipatool/ipatool search '%@' --limit %ld -c %@", self.latestSearchTerm, self.limitSearch, self.lastCountrySelected];
+        NSString *commandToExecute = [NSString stringWithFormat:kSearchCommandPathTermLimitCountry, kIpatoolScriptPath, self.latestSearchTerm, self.limitSearch, self.lastCountrySelected];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
         self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
@@ -150,7 +150,7 @@
                 errorToShow = obj;
             }
             [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:errorToShow hasTextfield:NO withTextfieldBlock:nil
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:errorToShow hasTextfield:NO withTextfieldBlock:nil
                 alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
             }];
             return YES;
@@ -180,10 +180,10 @@
     for (int i=0; i<[[self.searchResults copy] count]; i++) {
         if (i < [parsedAppName count] && i < [parsedAppVersion count] && i < [parsedAppBundle count]) {
             NSMutableDictionary *dictForApp = [NSMutableDictionary dictionary];
-            dictForApp[@"appName"] = parsedAppName[i];
-            dictForApp[@"appBundle"] = parsedAppBundle[i];
-            dictForApp[@"appVersion"] = parsedAppVersion[i];
-            dictForApp[@"appImage"] = [IPARUtils getAppIconFromApple:parsedAppBundle[i]] ? : [UIImage systemImageNamed:@"questionmark.diamond.fill"];
+            dictForApp[kAppnameIndex] = parsedAppName[i];
+            dictForApp[kAppBundleIndex] = parsedAppBundle[i];
+            dictForApp[kAppVersionIndex] = parsedAppVersion[i];
+            dictForApp[kAppimageIndex] = [IPARUtils getAppIconFromApple:parsedAppBundle[i]] ? : [UIImage systemImageNamed:kUnknownSystemImage];
             self.searchResults[i] = dictForApp;
         }
     }
@@ -215,19 +215,19 @@
 }
 
 - (UITableViewCell *)createSearchTableCellIfNotReused:(NSIndexPath *)indexPath {
-    IPARAppCell *cell = [self.tableView dequeueReusableCellWithIdentifier:@"IPARAppCell"];
+    IPARAppCell *cell = [self.tableView dequeueReusableCellWithIdentifier:kIPARCell];
     if (cell == nil) {
-        cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"IPARAppCell"];
+        cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kIPARCell];
     }
     UIView *selectionView = [UIView new];
     selectionView.backgroundColor = UIColor.clearColor;
     [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
     cell.backgroundColor = UIColor.clearColor;
     //still crashing.. need to figure out why!
-    cell.appName.text = self.searchResults[indexPath.row][@"appName"];
-    cell.appBundle.text = self.searchResults[indexPath.row][@"appBundle"];
-    cell.appVersion.text = self.searchResults[indexPath.row][@"appVersion"];
-    cell.appImage.image = self.searchResults[indexPath.row][@"appImage"];
+    cell.appName.text = self.searchResults[indexPath.row][kAppnameIndex];
+    cell.appBundle.text = self.searchResults[indexPath.row][kAppBundleIndex];
+    cell.appVersion.text = self.searchResults[indexPath.row][kAppVersionIndex];
+    cell.appImage.image = self.searchResults[indexPath.row][kAppimageIndex];
     return cell;
 }
 
@@ -238,7 +238,7 @@
 	    cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
 	}
     cell.textLabel.textColor = [UIColor colorWithRed:0/255.0 green:122/255.0 blue:255/255.0 alpha:1.0];
-    cell.textLabel.text = @"Show More Results";
+    cell.textLabel.text = kShowMoreButtonText;
     // Set Auto Layout constraints to center the text label in the cell
     cell.textLabel.translatesAutoresizingMaskIntoConstraints = NO;
     [cell.contentView addConstraint:[NSLayoutConstraint constraintWithItem:cell.textLabel attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:cell.contentView attribute:NSLayoutAttributeCenterY multiplier:1.0 constant:0.0]];
@@ -254,11 +254,11 @@
     if (indexPath.row < [self.searchResults count]) {
         AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
             UIPasteboard *pasteboard = [UIPasteboard generalPasteboard];
-            pasteboard.string = self.searchResults[indexPath.row][@"appBundle"];
+            pasteboard.string = self.searchResults[indexPath.row][kAppBundleIndex];
         };
-        NSString *appSelected = [NSString stringWithFormat:@"App Selected %@",self.searchResults[indexPath.row][@"appName"]];
-        NSString *bundleSelected = [NSString stringWithFormat:@"Bundle ID: %@", self.searchResults[indexPath.row][@"appBundle"]];
-        [IPARUtils presentDialogWithTitle:@"IPARanger\nCopy Bundle" message:[NSString stringWithFormat:@"%@\n\n%@", appSelected, bundleSelected]
+        NSString *appSelected = [NSString stringWithFormat:@"App Selected %@",self.searchResults[indexPath.row][kAppnameIndex]];
+        NSString *bundleSelected = [NSString stringWithFormat:@"Bundle ID: %@", self.searchResults[indexPath.row][kAppBundleIndex]];
+        [IPARUtils presentDialogWithTitle:kIPARangerCopyHeadline message:[NSString stringWithFormat:@"%@\n\n%@", appSelected, bundleSelected]
          hasTextfield:NO withTextfieldBlock:nil alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Copy Bundle" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
     } else {
         self.limitSearch += APPS_SEARCH_INITIAL_LIMIT;

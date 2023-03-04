@@ -44,24 +44,24 @@
     [contentView addSubview:headerView];
     [contentView addSubview:headerImageView];
 
-    UILabel *accountNameLabel = [self createLabelWithText:[IPARUtils getKeyFromFile:@"AccountName" defaultValueIfNil:@"N/A"] fontSize:17.0];
+    UILabel *accountNameLabel = [self createLabelWithText:[IPARUtils getKeyFromFile:@"AccountName" defaultValueIfNil:kUnknownValue] fontSize:17.0];
     [contentView addSubview:accountNameLabel];
 
-    UILabel *emailLabel = [self createLabelWithText:[IPARUtils getKeyFromFile:@"AccountEmail" defaultValueIfNil:@"N/A"] fontSize:17.0];
+    UILabel *emailLabel = [self createLabelWithText:[IPARUtils getKeyFromFile:@"AccountEmail" defaultValueIfNil:kUnknownValue] fontSize:17.0];
     [contentView addSubview:emailLabel];
 
     UIButton *logoutButton = [self createButtonWithImageName:nil title:@"Logout" fontSize:24.0 selectorName:@"handleLogout" frame:CGRectMake(0,0,0,0)];
     [logoutButton.titleLabel setFont:[UIFont systemFontOfSize:24.0 weight:UIFontWeightBold]];
     [contentView addSubview:logoutButton];
 
-    UILabel *lastLoginDate = [self createLabelWithText:[NSString stringWithFormat:@"Login Date: %@", [IPARUtils getKeyFromFile:@"lastLoginDate" defaultValueIfNil:@"N/A"]] fontSize:17.0];
+    UILabel *lastLoginDate = [self createLabelWithText:[NSString stringWithFormat:@"Login Date: %@", [IPARUtils getKeyFromFile:@"lastLoginDate" defaultValueIfNil:kUnknownValue]] fontSize:17.0];
     [contentView addSubview:lastLoginDate];
 
-    NSString *searchCountry = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
+    NSString *searchCountry = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:kDefaultInitialCountry];
     self.searchCountryLabel = [self createLabelWithText:[NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry] fontSize:17.0];
     [contentView addSubview:self.searchCountryLabel];
 
-    NSString *downloadCountry = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
+    NSString *downloadCountry = [IPARUtils getKeyFromFile:kCountryDownloadKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
     self.downloadCountryLabel = [self createLabelWithText:[NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:downloadCountry], downloadCountry] fontSize:17.0];
     [contentView addSubview:self.downloadCountryLabel];
 
@@ -146,9 +146,9 @@
 }
 
 - (void)updateCountry {
-    NSString *searchCountry = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:@"US"];
+    NSString *searchCountry = [IPARUtils getKeyFromFile:@"AccountCountrySearch" defaultValueIfNil:kDefaultInitialCountry];
     self.searchCountryLabel.text = [NSString stringWithFormat:@"Search In Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:searchCountry], searchCountry];
-    NSString *downloadCountry = [IPARUtils getKeyFromFile:@"AccountCountryDownload" defaultValueIfNil:@"US"];
+    NSString *downloadCountry = [IPARUtils getKeyFromFile:kCountryDownloadKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
     self.downloadCountryLabel.text = [NSString stringWithFormat:@"Download From Appstore Country: %@ [%@]", [IPARUtils emojiFlagForISOCountryCode:downloadCountry], downloadCountry];
 }
 

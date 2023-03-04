@@ -24,7 +24,6 @@
     [self.view addSubview:_emailTextField];
     [self.view addSubview:_passwordTextField];
     [self.view addSubview:_loginButton];
-        // Create the text view
     UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(110, 100, 180, 130)];
     textView.text = @"";
     textView.textColor = [UIColor whiteColor];
@@ -175,7 +174,7 @@
     [self presentViewController:alert animated:YES completion:nil];
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@", kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
+        NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
         self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
@@ -194,12 +193,12 @@
             }];
         } else if ([obj containsString:@"Missing value for"]) {
             [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"Please fill both your Apple ID Email and Password" hasTextfield:NO withTextfieldBlock:nil
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Please fill both your Apple ID Email and Password" hasTextfield:NO withTextfieldBlock:nil
                     alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
             }];
         } else {
             [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:obj hasTextfield:NO withTextfieldBlock:nil
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:obj hasTextfield:NO withTextfieldBlock:nil
                     alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
             }];
         }
@@ -229,7 +228,7 @@
     [self presentViewController:alert animated:YES completion:nil];
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:@"%@ auth login -e %@ -p %@%@", kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text, twoFARes];
+        NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword2FA, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text, twoFARes];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
         self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
@@ -238,12 +237,12 @@
             for (id obj in self.linesErrorOutput) {
                 if ([obj containsString:@"An unknown error has occurred"]) {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"Can't log you in\nCheck your Apple ID and password and try again" hasTextfield:NO withTextfieldBlock:nil
+                        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Can't log you in\nCheck your Apple ID and password and try again" hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
                     }];
                 } else {
                     [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:obj hasTextfield:NO withTextfieldBlock:nil
+                        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:obj hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
                     }];
                 }

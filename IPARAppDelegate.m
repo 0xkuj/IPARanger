@@ -13,7 +13,7 @@
 	_window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
 	[self basicSanity];
 
-	if ([[IPARUtils getKeyFromFile:@"Authenticated" defaultValueIfNil:@"NO"] isEqualToString:@"YES"]) {
+	if ([[IPARUtils getKeyFromFile:kAuthenticatedKeyFromFile defaultValueIfNil:@"NO"] isEqualToString:@"YES"]) {
         IPARSearchViewController *searchVC = [[IPARSearchViewController alloc] init];
 		UINavigationController *searchNC = [[UINavigationController alloc] initWithRootViewController:searchVC];
 
@@ -40,10 +40,10 @@
         exit(0);
     };
     if (s == nil) {
-        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"ipatool file was not found inside resources directory!" hasTextfield:NO withTextfieldBlock:nil
+        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"ipatool file was not found inside resources directory!" hasTextfield:NO withTextfieldBlock:nil
                         alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
     } else if (![s isEqualToString:kSha256verification]) {
-        [IPARUtils presentDialogWithTitle:@"IPARanger\nError" message:@"Could not verify the integrity of files" hasTextfield:NO withTextfieldBlock:nil
+        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Could not verify the integrity of files" hasTextfield:NO withTextfieldBlock:nil
                         alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
     }
 }
