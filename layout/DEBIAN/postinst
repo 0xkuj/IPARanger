@@ -7,8 +7,9 @@ chown -R 501:501 $FILES_DIR
 if [ $? -ne 0 ]; then
   echo "Settings up permissions FAILED with exit status $?. this may cause unexpected behavior"
 else
-  echo "Settings up permissions is done.!"
+  echo "Settings up permissions is done!"
   echo "Running uicache just in case the app wont appear.."
   uicache -p /Applications/IPARanger.app
-  echo "All done. enjoy!"
+  echo "Created with <3 by 0xkuj"
+  echo "You are all set. Enjoy!"
 fi
