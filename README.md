@@ -1,2 +1,2 @@
 # IPARanger_temp
-tempy
+Download any IPA from the appstore (encrypted) using your apple ID account 
