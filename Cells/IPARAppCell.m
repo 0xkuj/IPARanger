@@ -32,7 +32,6 @@
         self.appName.font = [UIFont systemFontOfSize:16 weight:UIFontWeightBold];
         self.appName.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appName];
-        
         [self.appName top:self.appImage.topAnchor padding:-6.5];
         [self.appName leading:self.appImage.trailingAnchor padding:15];
         //Fit appname to the size of the cell
@@ -42,7 +41,7 @@
             [self.baseView.bottomAnchor constraintGreaterThanOrEqualToAnchor:self.appName.bottomAnchor constant:10]
         ]];
         self.appName.adjustsFontSizeToFitWidth = YES;
-        self.appName.minimumScaleFactor = 0.3; // Or any other value between 0 and      
+        self.appName.minimumScaleFactor = 0.3;
         
         self.appBundle = [[UILabel alloc] init];
         self.appBundle.textColor = UIColor.tertiaryLabelColor;
@@ -64,7 +63,6 @@
         self.appVersion.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
         self.appVersion.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appVersion];
-        
         [self.appVersion top:self.appBundle.bottomAnchor padding:0];
         [self.appVersion leading:self.appImage.trailingAnchor padding:15];    
 
@@ -73,7 +71,6 @@
         self.appFilename.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
         self.appFilename.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appFilename];
-        
         [self.appFilename top:self.appName.bottomAnchor padding:1];
         [self.appFilename leading:self.appImage.trailingAnchor padding:15];
         self.appFilename.translatesAutoresizingMaskIntoConstraints = NO;
@@ -89,7 +86,6 @@
         self.appSize.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
         self.appSize.textAlignment = NSTextAlignmentLeft;
         [self.baseView addSubview:self.appSize];
-        
         [self.appSize top:self.appFilename.bottomAnchor padding:0];
         [self.appSize leading:self.appImage.trailingAnchor padding:15];  
 

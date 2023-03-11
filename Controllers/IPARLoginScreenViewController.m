@@ -9,8 +9,9 @@
 @property (nonatomic) IBOutlet UITextField *emailTextField;
 @property (nonatomic) IBOutlet UITextField *passwordTextField;
 @property (nonatomic) UIButton *loginButton;
-@property (nonatomic, strong) NSMutableArray *linesStandardOutput;
-@property (nonatomic, strong) NSMutableArray *linesErrorOutput;
+@property (nonatomic) UIButton *eyeButton;
+@property (nonatomic) NSMutableArray *linesStandardOutput;
+@property (nonatomic) NSMutableArray *linesErrorOutput;
 @property (nonatomic) UILabel *underLabel;
 @end
 
@@ -21,6 +22,7 @@
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
     [self setLoginButtons];
+    [self configureMainScreenGradient];
     [self.view addSubview:_emailTextField];
     [self.view addSubview:_passwordTextField];
     [self.view addSubview:_loginButton];
@@ -30,7 +32,7 @@
     textView.font = [UIFont systemFontOfSize:35];
     textView.backgroundColor = [UIColor clearColor];
     textView.editable = NO;
-
+    self.navigationController.navigationBarHidden = YES;
     // Animate the text
     NSString *fullText = @"IPARanger";
     for (int i = 0; i < fullText.length; i++) {
@@ -60,7 +62,8 @@
 
     UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    versionLabel.text = @"Version: 1.0.0";
+    versionLabel.text =  @"Version 1.2";
+    versionLabel.textColor = [UIColor whiteColor];
     [self.view addSubview:versionLabel];
     [NSLayoutConstraint activateConstraints:@[
         [versionLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
@@ -84,7 +87,13 @@
     self.emailTextField.delegate = self;
     self.passwordTextField.delegate = self;
     self.loginButton = [self setLoginButtonPrefsWithFrame:CGRectMake(65, 420, self.view.frame.size.width - 130, 40) title:@"Login"];
-    self.navigationController.navigationBarHidden = YES;
+    [self configureEyeButton];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+
+}
+
+- (void)configureMainScreenGradient {
     CAGradientLayer *gradientLayer = [CAGradientLayer layer];
     gradientLayer.frame = self.view.bounds;
     gradientLayer.colors = @[(id)[UIColor colorWithRed:13/255.0 green:23/255.0 blue:33/255.0 alpha:1.0].CGColor,
@@ -96,8 +105,24 @@
     [self.view.layer insertSublayer:gradientLayer atIndex:0];
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
     [self.view addGestureRecognizer:tap];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+}
+
+- (void)configureEyeButton {
+    self.eyeButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [self.eyeButton setImage:[UIImage systemImageNamed:kPasswordEyeButtonOpen] forState:UIControlStateNormal];
+    [self.eyeButton addTarget:self action:@selector(togglePasswordVisibility:) forControlEvents:UIControlEventTouchUpInside];
+    self.eyeButton.frame = CGRectMake(0, 0, 30, self.passwordTextField.frame.size.height);
+    UIView *rightView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 40, self.passwordTextField.frame.size.height)];
+    rightView.contentMode = UIViewContentModeRight;
+    [rightView addSubview:self.eyeButton];
+    self.passwordTextField.rightView = rightView;
+    self.passwordTextField.rightViewMode = UITextFieldViewModeAlways;
+}
+
+- (void)togglePasswordVisibility:(UIButton *)sender {
+    self.passwordTextField.secureTextEntry = !self.passwordTextField.secureTextEntry;
+    NSString *imageName = self.passwordTextField.secureTextEntry ? kPasswordEyeButtonOpen : kPasswordEyeButtonClosed;
+    [self.eyeButton setImage:[UIImage systemImageNamed:imageName] forState:UIControlStateNormal];
 }
 
 - (UIButton *)setLoginButtonPrefsWithFrame:(CGRect)frame title:(NSString *)title {
