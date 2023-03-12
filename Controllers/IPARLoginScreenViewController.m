@@ -21,35 +21,28 @@
     [super loadView];
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
+    self.navigationController.navigationBarHidden = YES;
     [self setLoginButtons];
     [self configureMainScreenGradient];
-    [self.view addSubview:_emailTextField];
-    [self.view addSubview:_passwordTextField];
-    [self.view addSubview:_loginButton];
+    [self setupTextAndAnimations];
+    [self setupVersionLabel];
+}
+
+- (void)setupTextAndAnimations {
     UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(110, 100, 180, 130)];
     textView.text = @"";
     textView.textColor = [UIColor whiteColor];
     textView.font = [UIFont systemFontOfSize:35];
     textView.backgroundColor = [UIColor clearColor];
     textView.editable = NO;
-    self.navigationController.navigationBarHidden = YES;
-    // Animate the text
     NSString *fullText = @"IPARanger";
     for (int i = 0; i < fullText.length; i++) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * i * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             textView.text = [fullText substringToIndex:i+1];
         });
     }
-    _underLabel = [[UILabel alloc] initWithFrame:CGRectMake(85, 105, 220, 130)];
-	[_underLabel setNumberOfLines:4];
-	_underLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
-	[_underLabel setText:@"\nGUI Based Application for ipatool\n\n Created by 0xkuj"];
-	[_underLabel setBackgroundColor:[UIColor clearColor]];
-	_underLabel.textColor = [UIColor whiteColor];
-	_underLabel.textAlignment = NSTextAlignmentCenter;
-	_underLabel.alpha = 0;
-		
-    [self.view addSubview:_underLabel];
+
+    [self setupUnderlabel];
     [NSTimer scheduledTimerWithTimeInterval:3
                                      target:self
                                    selector:@selector(increaseAlpha)
@@ -59,7 +52,21 @@
     [self.view addSubview:textView];
     [textView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16].active = YES;
     [textView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
+}
 
+- (void)setupUnderlabel {
+    self.underLabel = [[UILabel alloc] initWithFrame:CGRectMake(85, 105, 220, 130)];
+	[self.underLabel setNumberOfLines:4];
+	self.underLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
+	[self.underLabel setText:@"\nGUI Based Application for ipatool\n\n Created by 0xkuj"];
+	[self.underLabel setBackgroundColor:[UIColor clearColor]];
+	self.underLabel.textColor = [UIColor whiteColor];
+	self.underLabel.textAlignment = NSTextAlignmentCenter;
+	self.underLabel.alpha = 0;
+    [self.view addSubview:self.underLabel];
+}
+
+- (void)setupVersionLabel {
     UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
     versionLabel.text =  @"Version 1.2";
@@ -69,7 +76,6 @@
         [versionLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
         [versionLabel.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-20]
     ]];
-
 }
 
 /* provides the animation */
@@ -88,9 +94,11 @@
     self.passwordTextField.delegate = self;
     self.loginButton = [self setLoginButtonPrefsWithFrame:CGRectMake(65, 420, self.view.frame.size.width - 130, 40) title:@"Login"];
     [self configureEyeButton];
+    [self.view addSubview:self.emailTextField];
+    [self.view addSubview:self.passwordTextField];
+    [self.view addSubview:self.loginButton];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
-
 }
 
 - (void)configureMainScreenGradient {
