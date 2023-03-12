@@ -42,44 +42,59 @@
     _lastBundleDownload = [NSString string];
     _linesErrorOutput = [NSMutableArray array];
     _lastCountrySelected = [NSString string];
+    _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
+    _countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
+    _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+    _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
+    _downloadViewController = [[UIViewController alloc] init];
+    [self setupTableviewPropsAndBackground];
+    [self setupProgressViewCenter];
+    [self setupCountryButton];
+    [self setupDownloadAlertController];
+    [self _setUpNavigationBar2];
+    [self setupDownloadViewControllerStyle];
+    [self refreshTableData];
+}
+
+- (void)setupDownloadAlertController {
+    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        [self stopScriptAndRemoveObserver];
+    }];
+    [self.downloadAlertController addAction:cancelAction];
+}
+
+- (void)setupCountryButton {
+    self.lastCountrySelected = [IPARUtils getKeyFromFile:kCountryDownloadKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
+    self.countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
+                                                                  style:UIBarButtonItemStylePlain
+                                                                 target:self
+                                                                 action:@selector(countryButtonItemTapped:)];
+    NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
+    self.navigationItem.leftBarButtonItems = @[_countryButton];
+}
+
+- (void)setupProgressViewCenter {
+    self.progressView.center = CGPointMake(self.downloadViewController.view.frame.size.width/2, self.downloadViewController.view.frame.size.height/2);
+}
+
+- (void)setupTableviewPropsAndBackground {
     self.tableView.backgroundColor = UIColor.systemBackgroundColor;
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     self.tableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
     self.tableView.rowHeight = 80;
     self.tableView.estimatedRowHeight = 100;
-    // Create a label with the text you want to display
-    _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
-    _noDataLabel.numberOfLines = 2;
-    _noDataLabel.textColor = [UIColor grayColor];
-    _noDataLabel.textAlignment = NSTextAlignmentCenter;
-    // Set the label as the background view of the table view
-    self.tableView.backgroundView = _noDataLabel;
-    _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
-    _progressView.center = CGPointMake(_downloadViewController.view.frame.size.width/2, _downloadViewController.view.frame.size.height/2);
-    _lastCountrySelected = [IPARUtils getKeyFromFile:kCountryDownloadKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
-    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
-                                                                  style:UIBarButtonItemStylePlain
-                                                                 target:self
-                                                                 action:@selector(countryButtonItemTapped:)];
-    NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
-    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
-    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
-    _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-        [self stopScriptAndRemoveObserver];
-    }];
+    self.tableView.dataSource = self;
+    self.tableView.delegate = self;
+    self.noDataLabel.numberOfLines = 2;
+    self.noDataLabel.textColor = [UIColor grayColor];
+    self.noDataLabel.textAlignment = NSTextAlignmentCenter;
+    self.tableView.backgroundView = self.noDataLabel;
     UIRefreshControl *refreshControl = [[UIRefreshControl alloc] init];
     [refreshControl addTarget:self action:@selector(handleRefresh:) forControlEvents:UIControlEventValueChanged];
     [self.tableView addSubview:refreshControl];
-    [self.downloadAlertController addAction:cancelAction];
-     self.navigationItem.leftBarButtonItems = @[_countryButton];
-    self.tableView.dataSource = self;
-    self.tableView.delegate = self;
-    [self _setUpNavigationBar2];
-    [self setupDownloadViewControllerStyle];
-    [self refreshTableData];
-    self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
 }
 
 - (void)handleRefresh:(UIRefreshControl *)refreshControl {
@@ -123,14 +138,12 @@
 }
 
 - (void)setupDownloadViewControllerStyle {
-    self.downloadViewController = [[UIViewController alloc] init];
-    self.downloadViewController.view.backgroundColor = [UIColor blackColor];//[UIColor colorWithWhite:0 alpha:0.5];
+    self.downloadViewController.view.backgroundColor = [UIColor blackColor];
     self.downloadViewController.modalPresentationStyle = UIModalPresentationOverCurrentContext;
     self.downloadViewController.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
 }
 
-- (void)_setUpNavigationBar2
-{
+- (void)_setUpNavigationBar2 {
     UIBarButtonItem *deleteAllButton = [[UIBarButtonItem alloc] initWithTitle:@"Delete All"
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
@@ -153,7 +166,6 @@
         NSFileManager *fileManager = [NSFileManager defaultManager];
         int numOfObjectsToDelete = [[self.existingApps copy] count];
         for (int i=0; i<numOfObjectsToDelete; i++) {
-            // Delete the file from the data source
             NSError *error;
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
             BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, self.existingApps[indexPath.row][kFilenameIndex]] error:&error];
@@ -181,11 +193,8 @@
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
          [IPARUtils accountDetailsToFile:@"" authName:@"" authenticated:@"NO"]; 
         IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
-        // Step 1: Pop all view controllers from the navigation stack
         [self.navigationController popToRootViewControllerAnimated:NO];
-        // Step 2: Remove the tabbarcontroller from the window's rootViewController
         [self.tabBarController.view removeFromSuperview];
-        // Step 3: Instantiate your login screen view controller and set it as the new rootViewController of the window
         UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
         UIWindow *window = UIApplication.sharedApplication.delegate.window;
         window.rootViewController = navController;
@@ -278,7 +287,6 @@
 }
 
 #pragma mark - Table View Data Source
-
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
 	return 1;
 }
@@ -407,7 +415,7 @@
         [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
         [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:kCacheAppImage, tempDir, iconFileName, tempDir]];
     }
-    // Read the icon file and create a UIImage
+
     NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
     NSData *iconData = [NSData dataWithContentsOfFile:iconFilePath];
     UIImage *iconImage = [UIImage imageWithData:iconData];

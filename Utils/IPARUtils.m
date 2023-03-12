@@ -76,7 +76,7 @@ int spawnedProcessPid;
     return output;
 }
 
-+ (NSString *)getKeyFromFile:(NSString *)key defaultValueIfNil:(NSString *)defaultValue {
++ (id)getKeyFromFile:(NSString *)key defaultValueIfNil:(NSString *)defaultValue {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:kIPARangerSettingsDict]];
     return settings[key] ? settings[key] : defaultValue;

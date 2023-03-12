@@ -54,7 +54,11 @@
     [logoutButton.titleLabel setFont:[UIFont systemFontOfSize:24.0 weight:UIFontWeightBold]];
     [contentView addSubview:logoutButton];
 
-    UILabel *lastLoginDate = [self createLabelWithText:[NSString stringWithFormat:@"Login Date: %@", [IPARUtils getKeyFromFile:@"lastLoginDate" defaultValueIfNil:kUnknownValue]] fontSize:17.0];
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"MMM dd | HH:mm:ss"];
+    NSDate *date = [IPARUtils getKeyFromFile:@"lastLoginDate" defaultValueIfNil:kUnknownValue];
+    NSString *formattedDate = [dateFormatter stringFromDate:date];
+    UILabel *lastLoginDate = [self createLabelWithText:[NSString stringWithFormat:@"Login Date: %@", formattedDate] fontSize:17.0];
     [contentView addSubview:lastLoginDate];
 
     NSString *searchCountry = [IPARUtils getKeyFromFile:kCountrySearchKeyFromFile defaultValueIfNil:kDefaultInitialCountry];

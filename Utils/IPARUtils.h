@@ -23,7 +23,7 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command;
 + (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip;
 + (NSString *)sha256ForFileAtPath:(NSString *)filePath;
-+ (NSString *)getKeyFromFile:(NSString *)key defaultValueIfNil:(NSString *)defaultValue;
++ (id)getKeyFromFile:(NSString *)key defaultValueIfNil:(NSString *)defaultValue;
 + (void)saveKeyToFile:(NSString *)key withValue:(NSString *)value;
 + (void)accountDetailsToFile:(NSString *)userEmail authName:(NSString *)authName authenticated:(NSString *)authenticated;
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode;

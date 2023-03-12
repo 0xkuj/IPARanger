@@ -32,42 +32,46 @@
 
 - (void)loadView {
     [super loadView];
-    self.tableView.backgroundColor = UIColor.systemBackgroundColor;
-    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
-    self.tableView.rowHeight = 80;
-    self.tableView.estimatedRowHeight = 100;
+
     _searchResults = [NSMutableArray array];
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
     _latestSearchTerm = [NSString string];
     _limitSearch = APPS_SEARCH_INITIAL_LIMIT;
+    [self setupTableviewProps];
     [self setupNoDataLabel];
     [self setupCountryButton];
     [self _setUpNavigationBar];
+}
+
+- (void)setupTableviewProps {
+    self.tableView.backgroundColor = UIColor.systemBackgroundColor;
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tableView.rowHeight = 80;
+    self.tableView.estimatedRowHeight = 100;
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
-    
 }
 
 - (void)setupNoDataLabel {
-    _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
-    _noDataLabel.numberOfLines = 2;
-    _noDataLabel.textColor = [UIColor grayColor];
-    _noDataLabel.textAlignment = NSTextAlignmentCenter;
-    self.tableView.backgroundView = _noDataLabel;
+    self.noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
+    self.noDataLabel.numberOfLines = 2;
+    self.noDataLabel.textColor = [UIColor grayColor];
+    self.noDataLabel.textAlignment = NSTextAlignmentCenter;
+    self.tableView.backgroundView = self.noDataLabel;
 }
 
 - (void)setupCountryButton {
-    _lastCountrySelected = [IPARUtils getKeyFromFile:kCountrySearchKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
-    _countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:_lastCountrySelected]]
+    self.lastCountrySelected = [IPARUtils getKeyFromFile:kCountrySearchKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
+    self.countryButton = [[UIBarButtonItem alloc] initWithTitle:[NSString stringWithFormat:@"Search in Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]]
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
                                                                  action:@selector(countryButtonItemTapped:)];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
-    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
-    [_countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                   
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                   
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
-    self.navigationItem.leftBarButtonItem = _countryButton;
+    self.navigationItem.leftBarButtonItem = self.countryButton;
     self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Search"];
 }
 
