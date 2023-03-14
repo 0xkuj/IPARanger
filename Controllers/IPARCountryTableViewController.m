@@ -15,6 +15,7 @@
 - (instancetype)initWithCaller:(NSString *)caller {
     self = [super init];
     if (self) {
+        // we need this to avoid different locales as countries are different in parsing
         _USLocale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
         _viewControllerCaller = [NSString string];
         _viewControllerCaller = caller;

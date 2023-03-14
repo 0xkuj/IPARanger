@@ -184,7 +184,7 @@
         }
     };
 
-    NSString *confirmation = @"You are about to all downloaded IPAs\n\nThis operation cannot be undone\nAre you sure?";
+    NSString *confirmation = @"You are about to delete all downloaded IPAs\n\nThis operation cannot be undone\nAre you sure?";
     [IPARUtils presentDialogWithTitle:kIPARangerDeleteFilesHeadline message:confirmation hasTextfield:NO withTextfieldBlock:nil
                     alertConfirmationBlock:alertBlockConfirm withConfirmText:@"YES" alertCancelBlock:alertCancelBlock withCancelText:@"Cancel" presentOn:self];
 }
@@ -360,6 +360,12 @@
     [alert addAction:cancelAction];
     
     // Present alert
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        alert.popoverPresentationController.sourceView = self.view;
+        alert.popoverPresentationController.sourceRect = CGRectMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0, 0, 0);
+        alert.popoverPresentationController.permittedArrowDirections = 0;
+    }
+
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -470,6 +476,13 @@
     NSArray *activityItems = @[fileURL];
     
     UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:activityItems applicationActivities:nil];
+
+    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+        activityVC.popoverPresentationController.sourceView = self.view;
+        activityVC.popoverPresentationController.sourceRect = CGRectMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0, 0, 0);
+        activityVC.popoverPresentationController.permittedArrowDirections = 0;
+    }
+
     [self presentViewController:activityVC animated:YES completion:nil];
 }
 

@@ -1,6 +1,4 @@
 #import "IPARSearchViewController.h"
-#import "IPARDownloadViewController.h"
-#import "IPARLoginScreenViewController.h"
 #import "IPARCountryTableViewController.h"
 #import "../Utils/IPARUtils.h"
 #import "../Cells/IPARAppCell.h"
