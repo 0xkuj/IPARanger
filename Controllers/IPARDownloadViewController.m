@@ -478,12 +478,11 @@
     UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:activityItems applicationActivities:nil];
 
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-        activityVC.popoverPresentationController.sourceView = self.view;
-        activityVC.popoverPresentationController.sourceRect = CGRectMake(self.view.bounds.size.width / 2.0, self.view.bounds.size.height / 2.0, 0, 0);
-        activityVC.popoverPresentationController.permittedArrowDirections = 0;
+        UIPopoverController *popoverController = [[UIPopoverController alloc] initWithContentViewController:activityVC];
+        [popoverController presentPopoverFromRect:CGRectMake(self.view.frame.size.width/2, self.view.frame.size.height/4, 0, 0) inView:self.view permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
+    } else {
+        [self presentViewController:activityVC animated:YES completion:nil];
     }
-
-    [self presentViewController:activityVC animated:YES completion:nil];
 }
 
 - (void)openInFilza:(NSString *)pathToFile {
