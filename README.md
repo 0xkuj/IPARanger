@@ -21,6 +21,7 @@ Download Screen - Where you will handle - delete/rename/share/install your donwl
 
 
 Account Screen - Where you can see details such as last login date, your name and your email of the account that is connected to the app
+
 <img src="https://user-images.githubusercontent.com/56236821/228067467-e3bd91fc-9ac9-47d0-b82c-afefeb2fc571.jpg" width="400" height="800">
 
 # Support
