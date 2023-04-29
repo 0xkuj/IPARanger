@@ -1,4 +1,7 @@
 #import <CommonCrypto/CommonDigest.h>
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+
 #pragma clang diagnostic ignored "-Wunused-variable"
 
 @interface NSTask : NSObject

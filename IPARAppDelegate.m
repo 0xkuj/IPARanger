@@ -11,7 +11,7 @@
 
 - (void)applicationDidFinishLaunching:(UIApplication *)application {
 	_window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-	[self basicSanity];
+	//[self basicSanity];
 
 	if ([[IPARUtils getKeyFromFile:kAuthenticatedKeyFromFile defaultValueIfNil:@"NO"] isEqualToString:@"YES"]) {
         IPARSearchViewController *searchVC = [[IPARSearchViewController alloc] init];

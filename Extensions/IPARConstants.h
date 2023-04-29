@@ -1,11 +1,11 @@
 static const int APPS_SEARCH_INITIAL_LIMIT = 12;
-static NSString *const kLaunchPathBash = @"/bin/sh";
-static NSString *const kLaunchPathUnzip = @"/usr/bin/unzip";
+static NSString *const kLaunchPathBash = @"/var/jb/usr/bin/sh";
+static NSString *const kLaunchPathUnzip = @"/var/jb/usr/bin/unzip";
 static NSString *const kIPARCountryChangedNotification = @"com.0xkuj.iparanger.countryChanged";
 static NSString *const kIPARangerSettingsDict = @"/var/mobile/Documents/IPARanger/com.0xkuj.iparangersettings.plist";
 static NSString *const kIPARangerDocumentsPath = @"/var/mobile/Documents/IPARanger/";
-static NSString *const kIpatoolScriptPath = @"/Applications/IPARanger.app/ipatool/ipatool";
-static NSString *const kAppinstScriptPath = @"/Applications/IPARanger.app/ipatool/appinst";
+static NSString *const kIpatoolScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/ipatool";
+static NSString *const kAppinstScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/appinst";
 static NSString *const kstdOutput = @"standardOutput";
 static NSString *const kerrorOutput = @"errorOutput";
 static NSString *const kSha256verification = @"22b9b697f865d25a702561e47a4748ade2675de6e26ad3a9ca2a607e66b0144b";
