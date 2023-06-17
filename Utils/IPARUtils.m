@@ -2,11 +2,64 @@
 #include <spawn.h>
 #include <signal.h>
 #import "../Extensions/IPARConstants.h"
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#define READ_END 0
+#define WRITE_END 1
 
 // global variable to store the pid of the spawned process
 int spawnedProcessPid;
 
 @implementation IPARUtils
++ (NSDictionary *)setupTaskAndPipesWithCommandposix:(NSString *)launchPath arg1:(NSString *)arg1 
+  arg2:(NSString *)arg2 arg3:(NSString *)arg3 {
+    int stdout_pipe[2];
+    int stderr_pipe[2];
+    pipe(stdout_pipe);
+    pipe(stderr_pipe);
+    
+    posix_spawn_file_actions_t actions;
+    posix_spawn_file_actions_init(&actions);
+    posix_spawn_file_actions_adddup2(&actions, stdout_pipe[WRITE_END], STDOUT_FILENO);
+    posix_spawn_file_actions_adddup2(&actions, stderr_pipe[WRITE_END], STDERR_FILENO);
+
+    pid_t pid;
+    const char *argv[] = { [launchPath UTF8String], [arg1 UTF8String], [arg2 UTF8String], [arg3 UTF8String], NULL };
+    if (posix_spawn(&pid, [launchPath UTF8String], &actions, NULL, (char* const*)argv, NULL) != 0) {
+        NSString *error = [NSString stringWithFormat:@"posix spawn failed with command: %@ %@", launchPath, arg1];
+        return @{kerrorOutput: error};
+    }
+    
+    close(stdout_pipe[WRITE_END]);
+    close(stderr_pipe[WRITE_END]);
+
+    NSArray *standardOutputArray = [NSArray array];
+    NSArray *errorOutputArray = [NSArray array];
+    NSData *outputData = readDataFromFD(stdout_pipe[READ_END]);
+    NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
+    standardOutputArray = [outputString componentsSeparatedByString:@"\n"];
+        
+    NSData *errorData = readDataFromFD(stderr_pipe[READ_END]);
+    NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
+    errorOutputArray = [errorOutput componentsSeparatedByString:@"\n"];
+    close(stdout_pipe[READ_END]);
+    close(stderr_pipe[READ_END]);
+
+    return @{kstdOutput: standardOutputArray, kerrorOutput: errorOutputArray};
+}
+
+NSData *readDataFromFD(int fd) {
+    NSMutableData *data = [[NSMutableData alloc] init];
+    ssize_t count;
+    char buffer[4096];
+    while ((count = read(fd, buffer, sizeof(buffer))) > 0) {
+        [data appendBytes:buffer length:count];
+    }
+    return data;
+}
+
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command {
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath:kLaunchPathBash];
@@ -32,16 +85,16 @@ int spawnedProcessPid;
         NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
         errorOutputArray = [errorOutput componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
     }
-    
+
     return @{kstdOutput: standardOutputArray, kerrorOutput: errorOutputArray};
 }
 
 + (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip {
-    
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath:kLaunchPathUnzip];
     [task setArguments:@[ipaFilePath, [NSString stringWithFormat:@"Payload/*.app/%@", fileToUnzip]]];
     task.currentDirectoryPath = directoryPath;
+    NSLog(@"omriku try to unzip %@, with args: %@, %@, directory: %@",kLaunchPathUnzip, ipaFilePath, [NSString stringWithFormat:@"Payload/*.app/%@", fileToUnzip], directoryPath);
     [task launch];
     [task waitUntilExit];
 }

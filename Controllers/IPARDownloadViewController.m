@@ -47,6 +47,25 @@
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
     _downloadViewController = [[UIViewController alloc] init];
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    // Check if the folder exists
+    BOOL created = NO;
+    BOOL isDirectory = NO;
+    BOOL directoryExists = [fileManager fileExistsAtPath:kIPARangerDocumentsPath isDirectory:&isDirectory];
+    NSError *error = nil;
+    if ((directoryExists && isDirectory) == NO) {
+        created = [fileManager createDirectoryAtPath:kIPARangerDocumentsPath withIntermediateDirectories:YES attributes:nil error:&error];
+    }
+
+    // if (created == NO) {
+    //     AlertActionBlock alertCancelBlock = ^(void) {
+    //         UIApplication *application = [UIApplication sharedApplication];
+    //         NSURL *URL = [NSURL URLWithString:@"https://www.twitter.com/omrkujman"];
+    //         [application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+    //     };
+    //     [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:[NSString stringWithFormat:@"Error occurred: (%@) while trying to create directory %@\nPlease contact the developer 0xkuj", error, kIPARangerDocumentsPath] hasTextfield:NO withTextfieldBlock:nil
+    //                         alertConfirmationBlock:nil withConfirmText:@"Open Twitter" alertCancelBlock:nil withCancelText:nil presentOn:self];
+    // }
     [self setupTableviewPropsAndBackground];
     [self setupProgressViewCenter];
     [self setupCountryButton];
@@ -222,32 +241,24 @@
         long long fileSize = [attributes fileSize];
         NSString *humanReadableSize = [IPARUtils humanReadableSizeForBytes:fileSize];
         NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName];
-        NSString *str = @"\"%s (%s)\\n\"";
         //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
         //we extract the info.plist file into temp folder since we dont know the bundle yet. unzip -p caused issues with formatting!
-        NSString *tempDir = [NSString stringWithFormat:@"%@cacheDir/TEMP/", kIPARangerDocumentsPath];
+        NSString *tempDir = [NSString stringWithFormat:@"%@cacheDir/TEMP", kIPARangerDocumentsPath];
         [self extractInfoPlistFromIPA:ipaFilePath toFolder:tempDir];
-
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:kCatDisplaynameAndIdentifierFromInfo, tempDir, str]];
-        NSString *appName = kUnknownValue;
-        NSString *bundleName = kUnknownValue;
-        if ([standardAndErrorOutputs[kstdOutput] count] > 2) {
-            if ([standardAndErrorOutputs[kstdOutput][0] containsString:@"CFBundleDisplayName"]) {
-                appName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
-                bundleName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][1]];
-            } else {
-                appName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][1]];
-                bundleName = [IPARUtils parseValueFromKey:standardAndErrorOutputs[kstdOutput][0]];
-            }
-        }
-
+        NSString *folderNameInsidePayload = [self getFolderNameInsidePayload:[NSString stringWithFormat:@"%@/Payload/", tempDir]];
+        NSString *infoplistPath = [NSString stringWithFormat:@"%@/Payload/%@/Info.plist", tempDir, folderNameInsidePayload];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathPlutil arg1:kKeyForPlutil arg2:kKeyToExtractPlutilBundleId arg3:infoplistPath];
+        NSString *bundleName = standardAndErrorOutputs[kstdOutput][0] ? standardAndErrorOutputs[kstdOutput][0] : kUnknownValue;
+        standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathPlutil arg1:kKeyForPlutil arg2:kKeyToExtractPlutilBundleName arg3:infoplistPath];
+        NSString *appName = standardAndErrorOutputs[kstdOutput][0] ? standardAndErrorOutputs[kstdOutput][0] : kUnknownValue;
         NSString *cacheDir = [NSString stringWithFormat:@"%@cacheDir/%@/", kIPARangerDocumentsPath, bundleName];
+        
         if ([fileManager fileExistsAtPath:cacheDir] == NO) {
             [fileManager createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
         }
-        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:kCacheInfoPlist, tempDir, cacheDir]];
+        [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathMv arg1:infoplistPath arg2:cacheDir arg3:nil];
 
-        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName] tempDir:cacheDir];
+        UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName] appNameInsidePayload:folderNameInsidePayload tempDir:cacheDir];
         if (appImage == nil) {
             appImage = [UIImage systemImageNamed:kUnknownSystemImage];
         }
@@ -255,6 +266,11 @@
         //remove the TEMP folder, we do not need that until next file.
         [fileManager removeItemAtPath:tempDir error:nil];
     }
+}
+
+- (NSString *)getFolderNameInsidePayload:(NSString *)payloadPath {
+    NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathLs arg1:[NSString stringWithFormat:@"%@", payloadPath] arg2:nil arg3:nil];
+    return standardAndErrorOutputs[kstdOutput][0];
 }
 
 - (void)downloadButtonTapped:(id)sender {
@@ -273,6 +289,7 @@
                                             object:nil];
         
         NSString *commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, self.lastCountrySelected];
+        NSLog(@"omriku command to execute.. %@", commandToExecute);
         //here we dont deal with errors since 'download' keyword throws notification
         [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     };
@@ -408,10 +425,11 @@
 
 - (void)extractInfoPlistFromIPA:(NSString *)ipaFilePath toFolder:(NSString*)tempDir {
     [[NSFileManager defaultManager] createDirectoryAtPath:tempDir withIntermediateDirectories:YES attributes:nil error:nil];
+    NSLog(@"omriku extractInfoPlistFromIPA ipafilepath: %@, to folder: %@",ipaFilePath, tempDir);
     [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:@"Info.plist"];
 }
 
-- (UIImage *)getAppIconFromIPAFile:(NSString *)ipaFilePath tempDir:(NSString *)tempDir {
+- (UIImage *)getAppIconFromIPAFile:(NSString *)ipaFilePath appNameInsidePayload:(NSString *)appName tempDir:(NSString *)tempDir {
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *infoPlistPath = [tempDir stringByAppendingPathComponent:@"Info.plist"];
     NSDictionary *infoPlist = [NSDictionary dictionaryWithContentsOfFile:infoPlistPath];
@@ -419,7 +437,8 @@
 
     if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@%@@2x.png", tempDir, iconFileName]] == NO) {
         [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
-        [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:kCacheAppImage, tempDir, iconFileName, tempDir]];
+        NSString *moveFromDir = [NSString stringWithFormat:@"%@/Payload/%@/%@@2x.png", tempDir, appName, iconFileName];
+        [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathMv arg1:moveFromDir arg2:tempDir arg3:nil];
     }
 
     NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
@@ -533,6 +552,7 @@
 }
 
 - (void)receivedData:(NSNotification *)notification {
+    NSLog(@"omriku started reciv data with notif: %@", notification);
     NSData *data = [[notification object] availableData];
     NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
    

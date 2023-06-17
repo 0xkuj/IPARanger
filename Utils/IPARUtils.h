@@ -24,6 +24,8 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
 
 @interface IPARUtils : NSObject
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command;
++ (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommandposix:(NSString *)launchPath arg1:(NSString *)arg1 
+  arg2:(NSString *)arg2 arg3:(NSString *)arg3;
 + (void)setupUnzipTask:(NSString *)ipaFilePath directoryPath:(NSString *)directoryPath file:(NSString *)fileToUnzip;
 + (NSString *)sha256ForFileAtPath:(NSString *)filePath;
 + (id)getKeyFromFile:(NSString *)key defaultValueIfNil:(NSString *)defaultValue;

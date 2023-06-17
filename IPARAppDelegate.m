@@ -34,17 +34,19 @@
 	[_window makeKeyAndVisible];
 }
 
-- (void)basicSanity {
-    NSString *s = [IPARUtils sha256ForFileAtPath:kIpatoolScriptPath];
-    AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
-        exit(0);
-    };
-    if (s == nil) {
-        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"ipatool file was not found inside resources directory!" hasTextfield:NO withTextfieldBlock:nil
-                        alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
-    } else if (![s isEqualToString:kSha256verification]) {
-        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Could not verify the integrity of files" hasTextfield:NO withTextfieldBlock:nil
-                        alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
-    }
-}
+// Not needed..
+// - (void)basicSanity {
+//     NSString *s = [IPARUtils sha256ForFileAtPath:kIpatoolScriptPath];
+//     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
+//         exit(0);
+//     };
+//     if (s == nil) {
+//         [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"ipatool file was not found inside resources directory!" hasTextfield:NO withTextfieldBlock:nil
+//                         alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
+//     } else if (![s isEqualToString:kSha256verification]) {
+//         [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Could not verify the integrity of files" hasTextfield:NO withTextfieldBlock:nil
+//                         alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Exit IPARanger" alertCancelBlock:nil withCancelText:nil presentOn:self];
+//     }
+// }
+
 @end

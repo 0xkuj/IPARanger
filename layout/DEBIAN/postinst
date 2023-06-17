@@ -1,15 +1,20 @@
 #!/bin/bash
 #Created by: 0xkuj
 
-FILES_DIR="//var/mobile/Documents/IPARanger"
+FILES_DIR="//var/jb/Library/IPARanger/"
+if [ -d $FILES_DIR ]; then
+    echo "/var/jb/Library/IPARanger/ Already exists!"
+else
+    echo "/var/jb/Library/IPARanger/ Does not exists, Creating directory.."
+    mkdir $FILES_DIR
+fi
+
 echo "Settings up permissions to the main files directory..."
 chown -R 501:501 $FILES_DIR
 if [ $? -ne 0 ]; then
   echo "Settings up permissions FAILED with exit status $?. this may cause unexpected behavior"
 else
   echo "Settings up permissions is done!"
-  echo "Running uicache just in case the app wont appear.."
-  uicache -p /Applications/IPARanger.app
-  echo "Created with <3 by 0xkuj"
   echo "You are all set. Enjoy!"
+  echo "Created with <3 by 0xkuj"
 fi

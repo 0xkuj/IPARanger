@@ -1,9 +1,14 @@
+#import <rootless.h>
+
 static const int APPS_SEARCH_INITIAL_LIMIT = 12;
-static NSString *const kLaunchPathBash = @"/var/jb/usr/bin/sh";
+static NSString *const kLaunchPathBash = @"/var/jb/usr/bin/zsh";
 static NSString *const kLaunchPathUnzip = @"/var/jb/usr/bin/unzip";
+static NSString *const kLaunchPathPlutil = @"/var/jb/usr/bin/plutil";
+static NSString *const kLaunchPathLs = @"/var/jb/usr/bin/ls";
+static NSString *const kLaunchPathMv = @"/var/jb/usr/bin/mv";
 static NSString *const kIPARCountryChangedNotification = @"com.0xkuj.iparanger.countryChanged";
-static NSString *const kIPARangerSettingsDict = @"/var/mobile/Documents/IPARanger/com.0xkuj.iparangersettings.plist";
-static NSString *const kIPARangerDocumentsPath = @"/var/mobile/Documents/IPARanger/";
+static NSString *const kIPARangerSettingsDict = @"/var/jb/User/Library/Preferences/com.0xkuj.iparangersettings.plist";
+static NSString *const kIPARangerDocumentsPath = @"/var/jb/Library/IPARanger/";
 static NSString *const kIpatoolScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/ipatool";
 static NSString *const kAppinstScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/appinst";
 static NSString *const kstdOutput = @"standardOutput";
@@ -25,11 +30,6 @@ static NSString *const kLoginCommandPathAccountPassword = @"%@ auth login -e '%@
 static NSString *const kLoginCommandPathAccountPassword2FA = @"%@ auth login -e '%@' -p '%@%@'";
 static NSString *const kDownloadCommandBundleOutputpathCountry = @"%@ download --bundle-identifier %@ -o %@ --purchase -c %@";
 static NSString *const kPredicateIPAApps = @"pathExtension == 'ipa'";
-static NSString *const kLsPayload = @"ls %@Payload/";
-static NSString *const kCacheInfoPlist = @"mv %@Payload/*.app/Info.plist %@";
-static NSString *const kCacheAppImage = @"mv %@Payload/*.app/%@@2x.png %@";
-//static NSString *const kUnzipCertainFilesCommand = @"unzip -p '%@' Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(DisplayName|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'";
-static NSString *const kCatDisplaynameAndIdentifierFromInfo = @"cat %@/Payload/*.app/Info.plist | grep -A1 -E '<key>CFBundle(DisplayName|Identifier)</key>' | awk -F'[><]' '/<key>/ { key = $3 } /<string>/ { value = $3; printf(%@, value, key); }'";
 static NSString *const kFilenameIndex = @"filename";
 static NSString *const kAppnameIndex = @"appname";
 static NSString *const kSizeIndex = @"size";
@@ -57,4 +57,6 @@ static NSString *const kLastLogoutDateKeyFromFile = @"lastLogoutDate";
 static NSString *const kItunesImagesForBundleURL = @"https://itunes.apple.com/lookup?bundleId=%@";
 static NSString *const kItunesImagesForBundleAnswerField = @"artworkUrl100";
 static NSString *const kFilzaScheme = @"filza://%@%@";
-
+static NSString *const kKeyForPlutil = @"-key";
+static NSString *const kKeyToExtractPlutilBundleId = @"CFBundleIdentifier";
+static NSString *const kKeyToExtractPlutilBundleName = @"CFBundleDisplayName";
