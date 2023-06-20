@@ -69,7 +69,7 @@
 - (void)setupVersionLabel {
     UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    versionLabel.text =  @"Version 1.4 (rootless)";
+    versionLabel.text =  @"Version 1.5 (rootless)";
     versionLabel.textColor = [UIColor whiteColor];
     [self.view addSubview:versionLabel];
     [NSLayoutConstraint activateConstraints:@[
@@ -218,7 +218,8 @@
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathBash arg1:@"-c" arg2:commandToExecute arg3:nil];
+        //NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
         self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
 
@@ -272,7 +273,8 @@
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword2FA, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text, twoFARes];
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
+        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathBash arg1:@"-c" arg2:commandToExecute arg3:nil];
+       // NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
         self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
         self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
 
