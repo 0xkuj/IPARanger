@@ -69,7 +69,7 @@
 - (void)setupVersionLabel {
     UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    versionLabel.text =  @"Version 1.5 (rootless)";
+    versionLabel.text =  @"Version 1.6 (rootless)";
     versionLabel.textColor = [UIColor whiteColor];
     [self.view addSubview:versionLabel];
     [NSLayoutConstraint activateConstraints:@[
