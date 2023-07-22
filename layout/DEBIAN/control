@@ -1,6 +1,6 @@
 Package: com.0xkuj.iparanger
 Name: IPA Ranger
-Version: 1.6
+Version: 1.7
 Architecture: iphoneos-arm64
 Description: GUI Based Application for ipatool
 Depends: gawk, unzip, plutil
