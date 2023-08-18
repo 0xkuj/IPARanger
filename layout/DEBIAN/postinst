@@ -3,6 +3,13 @@
 
 FILES_DIR="//var/mobile/Documents/IPARanger"
 echo "Settings up permissions to the main files directory..."
+if [ -d $FILES_DIR ]; then
+    echo "$FILES_DIR Already exists!"
+else
+    echo "$FILES_DIR Does not exists, Creating directory.."
+    mkdir $FILES_DIR
+fi
+
 chown -R 501:501 $FILES_DIR
 if [ $? -ne 0 ]; then
   echo "Settings up permissions FAILED with exit status $?. this may cause unexpected behavior"

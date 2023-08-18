@@ -91,6 +91,8 @@
     UILabel *angelXwindLabel = [self createLabelWithText:@"angelXwind (appinst)" fontSize:14.0];
     [contentView addSubview:angelXwindLabel];
 
+    UILabel *versionLabel = [self createLabelWithText:@"Version 1.8" fontSize:14.0];
+    [contentView addSubview:versionLabel];
 
     [NSLayoutConstraint activateConstraints:@[
         [headerImageView.centerXAnchor constraintEqualToAnchor:headerView.centerXAnchor],
@@ -120,7 +122,9 @@
         [majdLabel.topAnchor constraintEqualToAnchor:credits.bottomAnchor constant:8],
         [majdLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
         [angelXwindLabel.topAnchor constraintEqualToAnchor:majdLabel.bottomAnchor constant:8],
-        [angelXwindLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor]
+        [angelXwindLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [versionLabel.topAnchor constraintEqualToAnchor:angelXwindLabel.bottomAnchor constant:32],
+        [versionLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor]
     ]];
     
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];

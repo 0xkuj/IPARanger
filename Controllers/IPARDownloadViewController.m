@@ -47,6 +47,17 @@
     _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
     _downloadViewController = [[UIViewController alloc] init];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+     // Check if the folder exists
+     BOOL created = NO;
+     BOOL isDirectory = NO;
+     BOOL directoryExists = [fileManager fileExistsAtPath:kIPARangerDocumentsPath isDirectory:&isDirectory];
+     NSError *error = nil;
+     if ((directoryExists && isDirectory) == NO) {
+         created = [fileManager createDirectoryAtPath:kIPARangerDocumentsPath withIntermediateDirectories:YES attributes:nil error:&error];
+     }
+
     [self setupTableviewPropsAndBackground];
     [self setupProgressViewCenter];
     [self setupCountryButton];
