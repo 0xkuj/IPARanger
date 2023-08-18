@@ -4,6 +4,7 @@ ARCHS = arm64 arm64e
 include $(THEOS)/makefiles/common.mk
 GO_EASY_ON_ME = 1
 APPLICATION_NAME = IPARanger
+DEBUG = 1
 
 SOURCES = $(shell find . -name 'IPAR*.m')
 

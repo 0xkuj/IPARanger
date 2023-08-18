@@ -3,9 +3,9 @@
 
 FILES_DIR="//var/jb/Library/IPARanger/"
 if [ -d $FILES_DIR ]; then
-    echo "/var/jb/Library/IPARanger/ Already exists!"
+    echo "$FILES_DIR Already exists!"
 else
-    echo "/var/jb/Library/IPARanger/ Does not exists, Creating directory.."
+    echo "$FILES_DIR Does not exists, Creating directory.."
     mkdir $FILES_DIR
 fi
 
