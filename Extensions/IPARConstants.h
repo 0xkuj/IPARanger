@@ -1,6 +1,20 @@
 #import <rootless.h>
 
 static const int APPS_SEARCH_INITIAL_LIMIT = 12;
+/*
+static NSString *const kLaunchPathBash = @"/bin/sh";
+static NSString *const kLaunchPathUnzip = @"/usr/bin/unzip";
+static NSString *const kLaunchPathPlutil = @"/usr/bin/plutil";
+static NSString *const kLaunchPathLs = @"/bin/ls";
+static NSString *const kLaunchPathMv = @"/bin/mv";
+static NSString *const kIPARCountryChangedNotification = @"com.0xkuj.iparanger.countryChanged";
+static NSString *const kIPARangerSettingsDict = @"/var/mobile/Documents/IPARanger/com.0xkuj.iparangersettings.plist";
+static NSString *const kIPARangerDocumentsPath = @"/var/mobile/Documents/IPARanger/";
+static NSString *const kIpatoolScriptPath = @"/Applications/IPARanger.app/ipatool/ipatool";
+static NSString *const kAppinstScriptPath = @"/Applications/IPARanger.app/ipatool/appinst";
+static NSString *const kstdOutput = @"standardOutput";
+static NSString *const kerrorOutput = @"errorOutput";
+*/
 static NSString *const kLaunchPathBash = @"/var/jb/usr/bin/zsh";
 static NSString *const kLaunchPathUnzip = @"/var/jb/usr/bin/unzip";
 static NSString *const kLaunchPathPlutil = @"/var/jb/usr/bin/plutil";

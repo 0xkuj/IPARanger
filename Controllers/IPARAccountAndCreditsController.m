@@ -91,7 +91,7 @@
     UILabel *angelXwindLabel = [self createLabelWithText:@"angelXwind (appinst)" fontSize:14.0];
     [contentView addSubview:angelXwindLabel];
 
-    UILabel *versionLabel = [self createLabelWithText:@"Version 1.8 (rootless)" fontSize:14.0];
+    UILabel *versionLabel = [self createLabelWithText:@"Version 1.9 (rootless)" fontSize:14.0];
     [contentView addSubview:versionLabel];
 
     [NSLayoutConstraint activateConstraints:@[

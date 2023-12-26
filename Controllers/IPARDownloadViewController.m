@@ -248,8 +248,13 @@
         NSString *folderNameInsidePayload = [self getFolderNameInsidePayload:[NSString stringWithFormat:@"%@/Payload/", tempDir]];
         NSString *infoplistPath = [NSString stringWithFormat:@"%@/Payload/%@/Info.plist", tempDir, folderNameInsidePayload];
         NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathPlutil arg1:kKeyForPlutil arg2:kKeyToExtractPlutilBundleId arg3:infoplistPath];
+        //NSString *commandToExecute = [NSString stringWithFormat:@"%@ %@ %@ %@",kLaunchPathPlutil, kKeyForPlutil, kKeyToExtractPlutilBundleId, infoplistPath];
+        //NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
+
         NSString *bundleName = standardAndErrorOutputs[kstdOutput][0] ? standardAndErrorOutputs[kstdOutput][0] : kUnknownValue;
         standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathPlutil arg1:kKeyForPlutil arg2:kKeyToExtractPlutilBundleName arg3:infoplistPath];
+        //NSString *anotherCommandToExecute = [NSString stringWithFormat:@"%@ %@ %@ %@",kLaunchPathPlutil, kKeyForPlutil, kKeyToExtractPlutilBundleName, infoplistPath];
+        //standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:anotherCommandToExecute];
         NSString *appName = standardAndErrorOutputs[kstdOutput][0] ? standardAndErrorOutputs[kstdOutput][0] : kUnknownValue;
         NSString *cacheDir = [NSString stringWithFormat:@"%@cacheDir/%@/", kIPARangerDocumentsPath, bundleName];
         
@@ -257,6 +262,8 @@
             [fileManager createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
         }
         [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathMv arg1:infoplistPath arg2:cacheDir arg3:nil];
+        //NSString *anotherCommandToExecuteAgain = [NSString stringWithFormat:@"%@ %@ %@",kLaunchPathMv,infoplistPath, cacheDir];
+        //[IPARUtils setupTaskAndPipesWithCommand:anotherCommandToExecuteAgain];
 
         UIImage *appImage = [self getAppIconFromIPAFile:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName] appNameInsidePayload:folderNameInsidePayload tempDir:cacheDir];
         if (appImage == nil) {
@@ -270,6 +277,8 @@
 
 - (NSString *)getFolderNameInsidePayload:(NSString *)payloadPath {
     NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathLs arg1:[NSString stringWithFormat:@"%@", payloadPath] arg2:nil arg3:nil];
+    //NSString *commandToExecute = [NSString stringWithFormat:@"%@ %@", kLaunchPathLs, payloadPath];
+    //NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     return standardAndErrorOutputs[kstdOutput][0];
 }
 
@@ -439,6 +448,8 @@
         [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
         NSString *moveFromDir = [NSString stringWithFormat:@"%@/Payload/%@/%@@2x.png", tempDir, appName, iconFileName];
         [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathMv arg1:moveFromDir arg2:tempDir arg3:nil];
+        //NSString *commandToExecute = [NSString stringWithFormat:@"%@ %@ %@", kLaunchPathMv, moveFromDir, tempDir];
+        //[IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     }
 
     NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];

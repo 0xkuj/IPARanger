@@ -1,7 +1,13 @@
 #!/bin/bash
 #Created by: 0xkuj
 
-FILES_DIR="//var/jb/Library/IPARanger/"
+CHECK_ROOTLESS="//var/jb/"
+if [ -d $CHECK_ROOTLESS ]; then
+    FILES_DIR="//var/jb/Library/IPARanger/"
+else
+    FILES_DIR="//var/mobile/Documents/IPARanger/"
+fi
+
 if [ -d $FILES_DIR ]; then
     echo "$FILES_DIR Already exists!"
 else
