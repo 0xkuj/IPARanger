@@ -442,17 +442,23 @@
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSString *infoPlistPath = [tempDir stringByAppendingPathComponent:@"Info.plist"];
     NSDictionary *infoPlist = [NSDictionary dictionaryWithContentsOfFile:infoPlistPath];
-    NSString *iconFileName = infoPlist[@"CFBundleIcons"][@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"][0];
+    NSString *iconFileName = @"icon.png";
+    if (infoPlist[@"CFBundleIcons"]){
+      iconFileName = infoPlist[@"CFBundleIcons"][@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"][0];
+      iconFileName = [NSString stringWithFormat:@"%@@2x.png", iconFileName];
+    }else if (infoPlist[@"CFBundleIconFiles"]){
+      iconFileName = infoPlist[@"CFBundleIconFiles"][0];
+    }
 
-    if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@%@@2x.png", tempDir, iconFileName]] == NO) {
+    if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@%@", tempDir, iconFileName]] == NO) {
         [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
-        NSString *moveFromDir = [NSString stringWithFormat:@"%@/Payload/%@/%@@2x.png", tempDir, appName, iconFileName];
+        NSString *moveFromDir = [NSString stringWithFormat:@"%@/Payload/%@/%@", tempDir, appName, iconFileName];
         [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathMv arg1:moveFromDir arg2:tempDir arg3:nil];
         //NSString *commandToExecute = [NSString stringWithFormat:@"%@ %@ %@", kLaunchPathMv, moveFromDir, tempDir];
         //[IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     }
 
-    NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
+    NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@", iconFileName]];
     NSData *iconData = [NSData dataWithContentsOfFile:iconFilePath];
     UIImage *iconImage = [UIImage imageWithData:iconData];
     [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@/Payload", tempDir] error:nil];
