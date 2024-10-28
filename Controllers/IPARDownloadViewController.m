@@ -256,6 +256,10 @@
         //NSString *anotherCommandToExecute = [NSString stringWithFormat:@"%@ %@ %@ %@",kLaunchPathPlutil, kKeyForPlutil, kKeyToExtractPlutilBundleName, infoplistPath];
         //standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:anotherCommandToExecute];
         NSString *appName = standardAndErrorOutputs[kstdOutput][0] ? standardAndErrorOutputs[kstdOutput][0] : kUnknownValue;
+		if([appName isEqualToString:@""]){
+		  standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathPlutil arg1:kKeyForPlutil arg2:@"CFBundleName" arg3:infoplistPath];
+		  appName = standardAndErrorOutputs[kstdOutput][0] ? standardAndErrorOutputs[kstdOutput][0] : kUnknownValue;
+		}
         NSString *cacheDir = [NSString stringWithFormat:@"%@cacheDir/%@/", kIPARangerDocumentsPath, bundleName];
         
         if ([fileManager fileExistsAtPath:cacheDir] == NO) {
