@@ -89,8 +89,8 @@
                                                                  target:self
                                                                  action:@selector(countryButtonItemTapped:)];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
-    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
-    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
     self.navigationItem.leftBarButtonItems = @[_countryButton];
 }
@@ -152,8 +152,8 @@
     self.lastCountrySelected = [IPARUtils getKeyFromFile:kCountryDownloadKeyFromFile defaultValueIfNil:kDefaultInitialCountry];
     self.countryButton.title = [NSString stringWithFormat:@"Download Appstore: %@", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]];
     NSDictionary *attributes = @{NSFontAttributeName:[UIFont systemFontOfSize:12.0]};
-    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];   
-    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal]; 
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
+    [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
 }
 
 - (void)setupDownloadViewControllerStyle {
@@ -167,11 +167,11 @@
                                                                   style:UIBarButtonItemStylePlain
                                                                  target:self
                                                                  action:@selector(deleteAllButtonTapped)];
-    deleteAllButton.tintColor = [UIColor redColor];      
+    deleteAllButton.tintColor = [UIColor redColor];
     UIFont *font = [UIFont systemFontOfSize:12.0]; // adjust this value as needed
     NSDictionary *attributes = @{NSFontAttributeName:font};
     [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
-    [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                      
+    [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
     UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:kDownloadSystemImage] style:UIBarButtonItemStylePlain target:self action:@selector(downloadButtonTapped:)];
     self.navigationItem.rightBarButtonItems = @[deleteAllButton, downloadButton];
 }
@@ -190,7 +190,7 @@
             BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, self.existingApps[indexPath.row][kFilenameIndex]] error:&error];
             if (success == NO) {
                 NSLog(@"Error deleting file: %@", error);
-            } 
+            }
             [self.existingApps removeObjectAtIndex:indexPath.row];
             [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
         }
@@ -208,10 +208,10 @@
                     alertConfirmationBlock:alertBlockConfirm withConfirmText:@"YES" alertCancelBlock:alertCancelBlock withCancelText:@"Cancel" presentOn:self];
 }
 
-- (AlertActionBlockWithTextField)getAlertBlockForLogout {  
+- (AlertActionBlockWithTextField)getAlertBlockForLogout {
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
-         [IPARUtils accountDetailsToFile:@"" authName:@"" authenticated:@"NO"]; 
-        IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init]; 
+         [IPARUtils accountDetailsToFile:@"" authName:@"" authenticated:@"NO"];
+        IPARLoginScreenViewController *loginScreenVC = [[IPARLoginScreenViewController alloc] init];
         [self.navigationController popToRootViewControllerAnimated:NO];
         [self.tabBarController.view removeFromSuperview];
         UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginScreenVC];
@@ -241,7 +241,7 @@
         long long fileSize = [attributes fileSize];
         NSString *humanReadableSize = [IPARUtils humanReadableSizeForBytes:fileSize];
         NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName];
-        //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files. 
+        //if you skip this command you get 2 seconds constant loading time. if not, 4 seconds per 60 files.
         //we extract the info.plist file into temp folder since we dont know the bundle yet. unzip -p caused issues with formatting!
         NSString *tempDir = [NSString stringWithFormat:@"%@cacheDir/TEMP", kIPARangerDocumentsPath];
         [self extractInfoPlistFromIPA:ipaFilePath toFolder:tempDir];
@@ -261,7 +261,7 @@
 		  appName = standardAndErrorOutputs[kstdOutput][0] ? standardAndErrorOutputs[kstdOutput][0] : kUnknownValue;
 		}
         NSString *cacheDir = [NSString stringWithFormat:@"%@cacheDir/%@/", kIPARangerDocumentsPath, bundleName];
-        
+
         if ([fileManager fileExistsAtPath:cacheDir] == NO) {
             [fileManager createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
         }
@@ -300,7 +300,7 @@
                                             selector:@selector(receivedData:)
                                             name:NSFileHandleDataAvailableNotification
                                             object:nil];
-        
+
         NSString *commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, self.lastCountrySelected];
         NSLog(@"omriku command to execute.. %@", commandToExecute);
         //here we dont deal with errors since 'download' keyword throws notification
@@ -334,7 +334,7 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     IPARAppCell *cell = [tableView dequeueReusableCellWithIdentifier:kIPARCell];
-        
+
     if (cell == nil) {
         cell = [[IPARAppCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:kIPARCell];
     }
@@ -346,7 +346,7 @@
         cell.appName.text = self.existingApps[indexPath.row][kAppnameIndex];
         cell.appFilename.text = self.existingApps[indexPath.row][kFilenameIndex];
         cell.appSize.text = [NSString stringWithFormat:@"%@", self.existingApps[indexPath.row][kSizeIndex]];
-        cell.appImage.image = self.existingApps[indexPath.row][kAppimageIndex];         
+        cell.appImage.image = self.existingApps[indexPath.row][kAppimageIndex];
     }
 
     return cell;
@@ -359,18 +359,18 @@
    [IPARUtils animateClickOnCell:cell];
 
     UIAlertController *alert = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleActionSheet];
-    
+
     // Create actions
     UIAlertAction *openInFilzaAction = [UIAlertAction actionWithTitle:@"Open in Filza" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
        [self openInFilza:self.existingApps[indexPath.row][kFilenameIndex]];
     }];
     UIAlertAction *shareAction = [UIAlertAction actionWithTitle:@"Share" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [self shareFile:self.existingApps[indexPath.row][kFilenameIndex]];
-        
+
     }];
     UIAlertAction *renameAction = [UIAlertAction actionWithTitle:@"Rename File" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [self renameFileAtPath:self.existingApps[indexPath.row][kFilenameIndex]];
-        
+
     }];
     UIAlertAction *installApplicationAction = [UIAlertAction actionWithTitle:@"Install Application" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [self installApplication:self.existingApps[indexPath.row][kFilenameIndex] appName:self.existingApps[indexPath.row][kAppnameIndex]];
@@ -380,7 +380,7 @@
         [self deleteFile:self.existingApps[indexPath.row][kFilenameIndex] index:indexPath];
     }];
     UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
-    
+
     // Add actions to alert
     [alert addAction:installApplicationAction];
     [alert addAction:openInFilzaAction];
@@ -388,7 +388,7 @@
     [alert addAction:shareAction];
     [alert addAction:deleteAction];
     [alert addAction:cancelAction];
-    
+
     // Present alert
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
         alert.popoverPresentationController.sourceView = self.view;
@@ -405,9 +405,9 @@
         UIAlertController *alert = [UIAlertController alertControllerWithTitle:kIPARangerInstallationHeadline
                                                                     message:[NSString stringWithFormat:@"\n\n\nInstalling Application '%@'", appName]
                                                                 preferredStyle:UIAlertControllerStyleAlert];
-                                                                
+
         [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 95)]];
-        [self presentViewController:alert animated:YES completion:nil]; 
+        [self presentViewController:alert animated:YES completion:nil];
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ %@%@", kAppinstScriptPath, kIPARangerDocumentsPath, ipaFilePath]];
             //Successfully installed
@@ -420,8 +420,8 @@
                         }];
                         return;
                     });
-                } 
-            }   
+                }
+            }
             dispatch_async(dispatch_get_main_queue(), ^{
                     [self dismissViewControllerAnimated:YES completion:^{
                         [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:[NSString stringWithFormat:@"Error occurred while trying to install '%@'", appName] hasTextfield:NO withTextfieldBlock:nil
@@ -449,24 +449,23 @@
     NSString *iconFileName = @"icon.png";
     if (infoPlist[@"CFBundleIcons"]){
       iconFileName = infoPlist[@"CFBundleIcons"][@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"][0];
-      iconFileName = [NSString stringWithFormat:@"%@@2x.png", iconFileName];
     }else if (infoPlist[@"CFBundleIconFiles"]){
       iconFileName = infoPlist[@"CFBundleIconFiles"][0];
     }
 
-    if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@%@", tempDir, iconFileName]] == NO) {
+    if ([fileManager fileExistsAtPath:[NSString stringWithFormat:@"%@%@@2x.png", tempDir, iconFileName]] == NO) {
         [IPARUtils setupUnzipTask:ipaFilePath directoryPath:tempDir file:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
-        NSString *moveFromDir = [NSString stringWithFormat:@"%@/Payload/%@/%@", tempDir, appName, iconFileName];
+        NSString *moveFromDir = [NSString stringWithFormat:@"%@/Payload/%@/%@@2x.png", tempDir, appName, iconFileName];
         [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathMv arg1:moveFromDir arg2:tempDir arg3:nil];
         //NSString *commandToExecute = [NSString stringWithFormat:@"%@ %@ %@", kLaunchPathMv, moveFromDir, tempDir];
         //[IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
     }
 
-    NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@", iconFileName]];
+    NSString *iconFilePath = [tempDir stringByAppendingPathComponent:[NSString stringWithFormat:@"%@@2x.png", iconFileName]];
     NSData *iconData = [NSData dataWithContentsOfFile:iconFilePath];
     UIImage *iconImage = [UIImage imageWithData:iconData];
     [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@/Payload", tempDir] error:nil];
-    
+
     return iconImage;
 }
 
@@ -474,14 +473,14 @@
     UIContextualAction *deleteAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleDestructive title:@"Delete" handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
         [self deleteFile:self.existingApps[indexPath.row][kFilenameIndex] index:indexPath];
     }];
-    
+
     UIImage *shareImage = [UIImage systemImageNamed:kShareSystemImage];
     UIContextualAction *shareAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:@"Share" handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {        // Share the file using a UIActivityViewController
         [self shareFile:self.existingApps[indexPath.row][kFilenameIndex]];
     }];
     shareAction.image = shareImage;
     shareAction.backgroundColor = [UIColor blueColor];
-    
+
     UISwipeActionsConfiguration *config = [UISwipeActionsConfiguration configurationWithActions:@[deleteAction, shareAction]];
     return config;
 }
@@ -494,7 +493,7 @@
         BOOL success = [fileManager removeItemAtPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, pathToFile] error:&error];
         if (success == NO) {
             NSLog(@"Error deleting file: %@", error);
-        } 
+        }
         [self.existingApps removeObjectAtIndex:indexPath.row];
         [self.tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
     };
@@ -514,7 +513,7 @@
 - (void)shareFile:(NSString *)pathToFile {
     NSURL *fileURL = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, pathToFile]];
     NSArray *activityItems = @[fileURL];
-    
+
     UIActivityViewController *activityVC = [[UIActivityViewController alloc] initWithActivityItems:activityItems applicationActivities:nil];
 
     if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
@@ -536,7 +535,7 @@
     NSString *fullPath = [NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, path];
     NSString *currentFileName = [fullPath lastPathComponent];
     NSString *currentDirectoryPath = [fullPath stringByDeletingLastPathComponent];
-    
+
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         NSString *newFileName = textField.text;
         //change filename only if different from old one
@@ -576,7 +575,7 @@
     NSLog(@"omriku started reciv data with notif: %@", notification);
     NSData *data = [[notification object] availableData];
     NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-   
+
     if ([output containsString:@"Error"]) {
         [self.downloadAlertController dismissViewControllerAnimated:YES completion:^{
              [self showErrorDialog:output];
@@ -625,7 +624,7 @@
     if ([errorMessage containsString:@"Country"] || [errorMessage containsString:@"country"]) {
         errorForDialog = @"Mismatch Country Code\nMake sure the 'Download Appstore' country you provided matches the country your account is linked to";
     } else if ([errorMessage.lowercaseString rangeOfString:token.lowercaseString].location != NSNotFound ||
-               [errorMessage.lowercaseString rangeOfString:login.lowercaseString].location != NSNotFound || 
+               [errorMessage.lowercaseString rangeOfString:login.lowercaseString].location != NSNotFound ||
                [errorMessage.lowercaseString rangeOfString:authentication.lowercaseString].location != NSNotFound) {
         errorForDialog = @"There was an issue with your token\nPlease logout and then login again with your account and try again";
         [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:errorForDialog hasTextfield:NO withTextfieldBlock:nil
@@ -639,7 +638,7 @@
     }
     [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:errorForDialog hasTextfield:NO withTextfieldBlock:nil
                     alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
-}        
+}
 
 
 - (void)updateProgressBar {
