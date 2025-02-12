@@ -1,11 +1,11 @@
 #!/bin/bash
 #Created by: 0xkuj
 
-CHECK_ROOTLESS="//var/jb/"
+CHECK_ROOTLESS="/var/jb/"
 if [ -d $CHECK_ROOTLESS ]; then
-    FILES_DIR="//var/jb/Library/IPARanger/"
+    FILES_DIR="/var/jb/Library/IPARanger/"
 else
-    FILES_DIR="//var/mobile/Documents/IPARanger/"
+    FILES_DIR="/var/mobile/Documents/IPARanger/"
 fi
 
 if [ -d $FILES_DIR ]; then
