@@ -2,7 +2,6 @@
 #include <spawn.h>
 #include <signal.h>
 #import "../Extensions/IPARConstants.h"
-#include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -13,6 +12,94 @@
 int spawnedProcessPid;
 
 @implementation IPARUtils
++ (NSDictionary *)executeCommandAndGetJSON:(NSString *)launchPath arg1:(NSString *)arg1 arg2:(NSString *)arg2 arg3:(NSString *)arg3 {
+    // Validate input
+    if (!launchPath.length) {
+        return @{kJsonLevel: kJsonLevelError, kJsonLevelError : @"Launch path cannot be empty" };
+    }
+    
+    BOOL isDownload = ([arg2 containsString:@"download"]);
+    
+    int stdout_pipe[2];
+    if (pipe(stdout_pipe) == -1) {
+        return @{kJsonLevel: kJsonLevelError, kJsonLevelError : @"Failed to create pipe" };
+    }
+
+    int fileDescriptor = -1;
+    if (isDownload) {
+        // Open the file for writing
+        fileDescriptor = open(kIPARangerLatestDownloadLogPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+        if (fileDescriptor == -1) {
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            return @{kJsonLevel: kJsonLevelError, kJsonLevelError : @"Failed to open file for writing" };
+        }
+    }
+
+    posix_spawn_file_actions_t actions;
+    posix_spawn_file_actions_init(&actions);
+    
+    // Redirect output
+    if (isDownload) {
+        posix_spawn_file_actions_adddup2(&actions, fileDescriptor, STDOUT_FILENO);
+    } else {
+        posix_spawn_file_actions_adddup2(&actions, stdout_pipe[1], STDOUT_FILENO);
+    }
+
+    pid_t pid;
+    const char *argv[] = { [launchPath UTF8String], [arg1 UTF8String], 
+                          [arg2 UTF8String], [arg3 UTF8String], NULL };
+    
+    int spawnError = posix_spawn(&pid, [launchPath UTF8String], &actions, NULL, 
+                                (char* const*)argv, NULL);
+    posix_spawn_file_actions_destroy(&actions);
+    
+    if (spawnError != 0) {
+        close(stdout_pipe[0]); 
+        close(stdout_pipe[1]);
+        if (isDownload) close(fileDescriptor);
+        return @{kJsonLevel: kJsonLevelError, kJsonLevelError : @"Failed to spawn process" };
+    }
+
+    spawnedProcessPid = pid;
+    if (isDownload) {
+        close(fileDescriptor); // Close file descriptor
+        close(stdout_pipe[0]);
+        close(stdout_pipe[1]);
+        
+        // Return success so you can track the file separately
+        return @{kJsonLevel: kJsonLevelInfo, kJsonResponseContent : @"Download started. Progress written to file."};
+    }
+
+    close(stdout_pipe[1]);  // Close write end
+
+    // Read JSON output
+    NSMutableData *outputData = [NSMutableData data];
+    char buffer[4096];
+    ssize_t bytesRead;
+    
+    while ((bytesRead = read(stdout_pipe[0], buffer, sizeof(buffer))) > 0) {
+        [outputData appendBytes:buffer length:bytesRead];
+    }
+    
+    close(stdout_pipe[0]);  // Close read end
+
+    // Wait for process to finish
+    waitpid(pid, NULL, 0);
+
+    // Parse JSON
+    NSError *jsonError = nil;
+    NSDictionary *jsonResult = [NSJSONSerialization JSONObjectWithData:outputData 
+                                                             options:0 
+                                                               error:&jsonError];
+
+    if (jsonError) {
+        return @{kJsonLevel: kJsonLevelError, kJsonLevelError : @"Failed to parse JSON output" };
+    }
+
+    return jsonResult;
+}
+
 + (NSDictionary *)setupTaskAndPipesWithCommandposix:(NSString *)launchPath arg1:(NSString *)arg1 
   arg2:(NSString *)arg2 arg3:(NSString *)arg3 {
     int stdout_pipe[2];
@@ -63,7 +150,7 @@ NSData *readDataFromFD(int fd) {
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command {
     NSTask *task = [[NSTask alloc] init];
     [task setLaunchPath:kLaunchPathBash];
-    [task setArguments:@[@"-c", command]];
+    [task setArguments:@[kBashCommandKey, command]];
     NSPipe *outputPipe = [NSPipe pipe];
     NSPipe *errorPipe = [NSPipe pipe];
     [task setStandardError:errorPipe];
@@ -85,7 +172,6 @@ NSData *readDataFromFD(int fd) {
         NSString *errorOutput = [[NSString alloc] initWithData:errorData encoding:NSUTF8StringEncoding];
         errorOutputArray = [errorOutput componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
     }
-
     return @{kstdOutput: standardOutputArray, kerrorOutput: errorOutputArray};
 }
 
@@ -94,7 +180,6 @@ NSData *readDataFromFD(int fd) {
     [task setLaunchPath:kLaunchPathUnzip];
     [task setArguments:@[ipaFilePath, [NSString stringWithFormat:@"Payload/*.app/%@", fileToUnzip]]];
     task.currentDirectoryPath = directoryPath;
-    NSLog(@"omriku try to unzip %@, with args: %@, %@, directory: %@",kLaunchPathUnzip, ipaFilePath, [NSString stringWithFormat:@"Payload/*.app/%@", fileToUnzip], directoryPath);
     [task launch];
     [task waitUntilExit];
 }
@@ -102,10 +187,9 @@ NSData *readDataFromFD(int fd) {
 + (NSString *)sha256ForFileAtPath:(NSString *)filePath {
     NSFileHandle *handle = [NSFileHandle fileHandleForReadingAtPath:filePath];
     if (handle == nil) {
-        NSLog(@"File %@ not found", filePath);
         return nil;
     }
-
+    
     CC_SHA256_CTX sha256;
     CC_SHA256_Init(&sha256);
 
@@ -150,7 +234,7 @@ NSData *readDataFromFD(int fd) {
     NSMutableDictionary *settings = [NSMutableDictionary dictionary];
     [settings addEntriesFromDictionary:[NSDictionary dictionaryWithContentsOfFile:kIPARangerSettingsDict]];
     settings[kAccountEmailKeyFromFile] = userEmail;
-    settings[kAccountNameKeyFromFile] = [self parseLoginNameFromAuthString:authName];
+    settings[kAccountNameKeyFromFile] = authName;
     settings[kAuthenticatedKeyFromFile] = authenticated;
     if ([authenticated isEqualToString:@"NO"]) {
         settings[kLastLogoutDateKeyFromFile] = [NSDate date];
@@ -176,44 +260,75 @@ NSData *readDataFromFD(int fd) {
     return [[NSString alloc] initWithBytes:bytes length:countryCode.length *sizeof(wchar_t) encoding:NSUTF32LittleEndianStringEncoding];
 }
 
-+ (NSString *)parseLoginNameFromAuthString:(NSString *)authString {
-    // Create the regular expression pattern
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"'([^']*)'" options:NSRegularExpressionCaseInsensitive error:nil];
-
-    // Search the input string for matches to the pattern
-    NSArray *matches = [regex matchesInString:authString options:0 range:NSMakeRange(0, authString.length)];
-
-    // Extract the matched strings between single quotes
-    for (NSTextCheckingResult *match in matches) {
-        NSRange matchRange = [match rangeAtIndex:1];
-        return [authString substringWithRange:matchRange];
-    }
-    return @"";
++ (UIButton *)createButtonWithImageName:(NSString *)imageName title:(NSString *)title fontSize:(CGFloat)fontSize selectorName:(NSString *)selectorName frame:(CGRect)frame {
+    SEL selector = NSSelectorFromString(selectorName);
+    UIButton *button = [[UIButton alloc] initWithFrame:frame];
+    [button setTitle:title forState:UIControlStateNormal];
+    [button setTitleColor:[UIColor systemBlueColor] forState:UIControlStateNormal];
+    button.titleLabel.font = [UIFont systemFontOfSize:fontSize];
+    [button sizeToFit];
+    [button setImage:[UIImage imageNamed:imageName] forState:UIControlStateNormal];
+    [button addTarget:self action:selector forControlEvents:UIControlEventTouchUpInside];
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    [button setImageEdgeInsets:UIEdgeInsetsMake(0, -30, 0, 0)]; // shift image left by 10 points
+    [button setTitleEdgeInsets:UIEdgeInsetsMake(0, -20, 0, 0)]; // shift text right by 10 points
+    return button;
 }
 
++ (void)openTW {
+	UIApplication *application = [UIApplication sharedApplication];
+	NSURL *URL = [NSURL URLWithString:kTwitterLink];
+	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+}
 
-+ (UIImage *)getAppIconFromApple:(NSString *)bundleId {
-    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:kItunesImagesForBundleURL, bundleId]];
-    NSData *data = [NSData dataWithContentsOfURL:url];
++ (void)openPP {
+	UIApplication *application = [UIApplication sharedApplication];
+	NSURL *URL = [NSURL URLWithString:kPaypalLink];
+	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+}
 
-    if (data) {
-        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
-        NSArray *results = json[@"results"];
-        
-        if (results.count > 0) {
-            NSDictionary *appInfo = results[0];
-            NSString *iconUrlString = appInfo[kItunesImagesForBundleAnswerField];
-            NSURL *iconUrl = [NSURL URLWithString:iconUrlString];
-            NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
-            UIImage *iconImage = [UIImage imageWithData:iconData];
-            return iconImage;
++ (void)openGithub {
+	UIApplication *application = [UIApplication sharedApplication];
+	NSURL *URL = [NSURL URLWithString:kGithubRepoLink];
+	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
+}
+
++ (void)getAppIconFromApple:(NSString *)bundleId completion:(void (^)(UIImage *appIcon))completion {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
+        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:kItunesImagesForBundleURL, bundleId]];
+        NSData *data = [NSData dataWithContentsOfURL:url];
+
+        UIImage *iconImage = nil;
+
+        if (data) {
+            NSError *jsonError = nil;
+            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&jsonError];
+
+            if (!jsonError) {
+                NSArray *results = json[@"results"];
+                if (results.count > 0) {
+                    NSDictionary *appInfo = results[0];
+                    NSString *iconUrlString = appInfo[kItunesImagesForBundleAnswerField];
+                    NSURL *iconUrl = [NSURL URLWithString:iconUrlString];
+                    NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
+
+                    if (iconData) {
+                        iconImage = [UIImage imageWithData:iconData];
+                    }
+                }
+            }
         }
-    }
-    return nil;
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (completion) {
+                completion(iconImage);
+            }
+        });
+    });
 }
 
 + (NSString *)humanReadableSizeForBytes:(long long)bytes {
-    NSArray *suffixes = @[@"B", @"KB", @"MB", @"GB", @"TB"];
+    NSArray *suffixes = @[@"B", @"KB", @"MB", @"GB"];
     int suffixIndex = 0;
     double size = (double)bytes;
     
@@ -224,43 +339,6 @@ NSData *readDataFromFD(int fd) {
     
     NSString *sizeString = [NSString stringWithFormat:@"%.1f %@", size, suffixes[suffixIndex]];
     return sizeString;
-}
-
-+ (NSArray *)parseDetailFromStringByRegex:(NSArray *)strings regex:(NSString *)regex {
-    NSError *error = nil;
-    NSMutableArray *retval = [NSMutableArray array];
-    NSRegularExpression *regx = [NSRegularExpression regularExpressionWithPattern:regex options:0 error:&error];
-
-    for (NSString *string in strings) {
-        NSTextCheckingResult *match = [regx firstMatchInString:string options:0 range:NSMakeRange(0, string.length)];
-        if (match) {
-            NSRange range = [match rangeAtIndex:1];
-            [retval addObject:[string substringWithRange:range]];
-        }
-    }
-    return retval;
-}
-
-+ (NSString *)parseValueFromKey:(NSString *)CFKey {
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:@"^(.+?)\\s*\\(" options:0 error:nil];
-    NSTextCheckingResult *match = [regex firstMatchInString:CFKey options:0 range:NSMakeRange(0, [CFKey length])];
-    NSString *result = [CFKey substringWithRange:[match rangeAtIndex:1]];
-    return result;
-}
-
-+ (NSArray *)parseAppVersionFromStrings:(NSArray *)strings {
-    NSString *pattern = @"\\((.*?)\\)[^\\(]*$";
-    NSMutableArray *retval = [NSMutableArray array];
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:0 error:nil];
-
-    for (NSString *string in strings) {
-        NSRange range = [regex rangeOfFirstMatchInString:string options:NSMatchingReportCompletion range:NSMakeRange(0, [string length])];
-        if (range.location != NSNotFound) {
-            NSString *version = [string substringWithRange:range];
-            [retval addObject:[version substringWithRange:NSMakeRange(1, [version length] - 3)]];
-        }
-    }
-    return retval;
 }
 
 + (void)animateClickOnCell:(UITableViewCell *)cell {
@@ -320,6 +398,36 @@ NSData *readDataFromFD(int fd) {
     spinner.color = [UIColor grayColor];
     [spinner startAnimating];
     return spinner;
+}
+
++ (unsigned long long)calculateFolderSize:(NSString *)folderPath {
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSError *error = nil;
+    if (![fileManager fileExistsAtPath:folderPath]) {
+        return 0;
+    }
+
+    NSArray *contents = [fileManager contentsOfDirectoryAtPath:folderPath error:&error];
+    if (error) {
+        return 0;
+    }
+
+    unsigned long long folderSize = 0;
+    for (NSString *item in contents) {
+        NSString *itemPath = [folderPath stringByAppendingPathComponent:item];
+        NSDictionary *attributes = [fileManager attributesOfItemAtPath:itemPath error:&error];
+        if (error) {
+            continue;
+        }
+        
+        if ([[attributes fileType] isEqualToString:NSFileTypeDirectory]) {
+            folderSize += [self calculateFolderSize:itemPath];
+        } else {
+            folderSize += [attributes fileSize];
+        }
+    }
+    
+    return folderSize;
 }
 
 + (void)cancelScript {

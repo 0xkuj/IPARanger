@@ -23,6 +23,7 @@ typedef void (^AlertActionBlockWithTextField)(UITextField *);
 typedef void (^AlertTextFieldBlock)(UITextField *);
 
 @interface IPARUtils : NSObject
++ (NSDictionary *)executeCommandAndGetJSON:(NSString *)launchPath arg1:(NSString *)arg1 arg2:(NSString *)arg2 arg3:(NSString *)arg3;
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommand:(NSString *)command;
 + (NSDictionary<NSString*,NSArray*> *)setupTaskAndPipesWithCommandposix:(NSString *)launchPath arg1:(NSString *)arg1 
   arg2:(NSString *)arg2 arg3:(NSString *)arg3;
@@ -32,11 +33,8 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
 + (void)saveKeyToFile:(NSString *)key withValue:(NSString *)value;
 + (void)accountDetailsToFile:(NSString *)userEmail authName:(NSString *)authName authenticated:(NSString *)authenticated;
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode;
-+ (UIImage *)getAppIconFromApple:(NSString *)bundleId;
++ (void)getAppIconFromApple:(NSString *)bundleId completion:(void (^)(UIImage *appIcon))completion;
 + (NSString *)humanReadableSizeForBytes:(long long)bytes;
-+ (NSArray *)parseDetailFromStringByRegex:(NSArray *)strings regex:(NSString *)regex;
-+ (NSString *)parseValueFromKey:(NSString *)CFKey;
-+ (NSArray *)parseAppVersionFromStrings:(NSArray *)strings;
 + (void)animateClickOnCell:(UITableViewCell *)cell;
 + (void)presentDialogWithTitle:(NSString *)title 
                     message:(NSString *)message
@@ -49,5 +47,8 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
                     presentOn:(id)viewController;
 + (UIActivityIndicatorView *)createActivitiyIndicatorWithPoint:(CGPoint)point;
 + (void)cancelScript;
++ (UIButton *)createButtonWithImageName:(NSString *)imageName title:(NSString *)title fontSize:(CGFloat)fontSize selectorName:(NSString *)selectorName frame:(CGRect)frame;
++ (unsigned long long)calculateFolderSize:(NSString *)folderPath;
++ (void)openGithub;
 @end
 

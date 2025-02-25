@@ -10,22 +10,71 @@
 @property (nonatomic) IBOutlet UITextField *passwordTextField;
 @property (nonatomic) UIButton *loginButton;
 @property (nonatomic) UIButton *eyeButton;
-@property (nonatomic) NSMutableArray *linesStandardOutput;
-@property (nonatomic) NSMutableArray *linesErrorOutput;
+@property (nonatomic) NSDictionary *lastCommandResult;
 @property (nonatomic) UILabel *underLabel;
+@property (nonatomic) int welcomeMessageCounter;
+@property (nonatomic) NSTimer *welcomeMessageTimer;
 @end
 
 @implementation IPARLoginScreenViewController
-
 - (void)loadView {
     [super loadView];
-    _linesStandardOutput = [NSMutableArray array];
-    _linesErrorOutput = [NSMutableArray array];
+    _lastCommandResult = [NSDictionary dictionary];
+    self.welcomeMessageCounter = 10;
+    self.welcomeMessageTimer = nil;
     self.navigationController.navigationBarHidden = YES;
     [self setLoginButtons];
     [self configureMainScreenGradient];
     [self setupTextAndAnimations];
     [self setupVersionLabel];
+    [self setupGHLabel];
+    [self setupXLabel];
+}
+
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    if (![[IPARUtils getKeyFromFile:kFirstLaunchKey defaultValueIfNil:kUnknownValue] isEqualToString:kFirstLaunchDoneKey]) {
+        [self showFirstTimeAlert];
+    }
+}
+
+- (void)showFirstTimeAlert {
+    if (self.welcomeMessageTimer != nil) {
+        [self.welcomeMessageTimer invalidate];
+    }
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Welcome to IPA Ranger!"
+                                                                             message:@"This app is an open source project I worked hard to maintain. Your account and password will be sent directly to Apple servers and will not be saved on your device.\n\nIf you have any concerns, please check out the source code below (and consider dropping a star there as well ;) )\n\nEnjoy!"
+                                                                      preferredStyle:UIAlertControllerStyleAlert];
+    
+     __weak typeof(self) weakSelf = self;
+    UIAlertAction *githubAction = [UIAlertAction actionWithTitle:@"Checkout IPA Ranger Code"
+                                                          style:UIAlertActionStyleDefault
+                                                        handler:^(UIAlertAction * _Nonnull action) {
+                                                            [IPARUtils openGithub];
+                                                            [weakSelf showFirstTimeAlert];
+                                                        }];
+    
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK (10...)"
+                                                       style:UIAlertActionStyleDefault
+                                                     handler:^(UIAlertAction * _Nonnull action) {
+                                                         [IPARUtils saveKeyToFile:kFirstLaunchKey withValue:kFirstLaunchDoneKey];
+                                                     }];
+
+    [alertController addAction:githubAction];
+    [alertController addAction:okAction];
+    okAction.enabled = NO;
+    [self presentViewController:alertController animated:YES completion:^{
+            self.welcomeMessageTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 repeats:YES block:^(NSTimer * _Nonnull timer) {
+            self.welcomeMessageCounter--;
+            if (self.welcomeMessageCounter > 0) {
+                [okAction setValue:[NSString stringWithFormat:@"OK (%d...)", self.welcomeMessageCounter] forKey:@"title"];
+            } else {
+                [okAction setValue:@"OK" forKey:@"title"];
+                okAction.enabled = YES;
+                [self.welcomeMessageTimer invalidate];
+            }
+        }];
+    }];
 }
 
 - (void)setupTextAndAnimations {
@@ -35,7 +84,7 @@
     textView.font = [UIFont systemFontOfSize:35];
     textView.backgroundColor = [UIColor clearColor];
     textView.editable = NO;
-    NSString *fullText = @"IPARanger";
+    NSString *fullText = @"IPA Ranger";
     for (int i = 0; i < fullText.length; i++) {
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * i * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             textView.text = [fullText substringToIndex:i+1];
@@ -66,10 +115,28 @@
     [self.view addSubview:self.underLabel];
 }
 
+- (void)setupGHLabel {
+    UIButton *followMeGithub = [IPARUtils createButtonWithImageName:kGithubIcon title:@"Source Code" fontSize:16.0 selectorName:@"openGithub" frame:CGRectMake(0,0,150,50)];
+    [self.view addSubview:followMeGithub];
+    [NSLayoutConstraint activateConstraints:@[
+        [followMeGithub.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [followMeGithub.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-110]
+    ]];
+}
+
+- (void)setupXLabel {
+    UIButton *followMeTwitter = [IPARUtils createButtonWithImageName:kTwitterIcon title:@"Need help?" fontSize:16.0 selectorName:@"openTW" frame:CGRectMake(0,0,150,50)];
+    [self.view addSubview:followMeTwitter];
+    [NSLayoutConstraint activateConstraints:@[
+        [followMeTwitter.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+        [followMeTwitter.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-60]
+    ]];
+}
+
 - (void)setupVersionLabel {
     UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    versionLabel.text =  @"Version 1.9 (rootless)";
+    versionLabel.text = kIPARangerVersion;
     versionLabel.textColor = [UIColor whiteColor];
     [self.view addSubview:versionLabel];
     [NSLayoutConstraint activateConstraints:@[
@@ -92,7 +159,7 @@
     self.passwordTextField.secureTextEntry = YES;
     self.emailTextField.delegate = self;
     self.passwordTextField.delegate = self;
-    self.loginButton = [self setLoginButtonPrefsWithFrame:CGRectMake(65, 420, self.view.frame.size.width - 130, 40) title:@"Login"];
+    self.loginButton = [self setLoginButtonPrefsWithFrame:CGRectMake(65, 420, self.view.frame.size.width - 130, 40) title:kLoginTitle];
     [self configureEyeButton];
     [self.view addSubview:self.emailTextField];
     [self.view addSubview:self.passwordTextField];
@@ -104,15 +171,13 @@
 - (void)configureMainScreenGradient {
     CAGradientLayer *gradientLayer = [CAGradientLayer layer];
     gradientLayer.frame = self.view.bounds;
-    gradientLayer.colors = @[(id)[UIColor colorWithRed:13/255.0 green:23/255.0 blue:33/255.0 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:27/255.0 green:40/255.0 blue:56/255.0 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:40/255.0 green:57/255.0 blue:78/255.0 alpha:1.0].CGColor,
-                             (id)[UIColor colorWithRed:50/255.0 green:72/255.0 blue:98/255.0 alpha:1.0].CGColor];
+    gradientLayer.colors = @[
+        (id)[UIColor colorWithRed:30/255.0 green:50/255.0 blue:80/255.0 alpha:1.0].CGColor,
+        (id)[UIColor colorWithRed:50/255.0 green:85/255.0 blue:120/255.0 alpha:1.0].CGColor
+    ];
     gradientLayer.startPoint = CGPointMake(0.5, 0.0);
     gradientLayer.endPoint = CGPointMake(0.5, 1.0);
     [self.view.layer insertSublayer:gradientLayer atIndex:0];
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
-    [self.view addGestureRecognizer:tap];
 }
 
 - (void)configureEyeButton {
@@ -135,7 +200,7 @@
 
 - (UIButton *)setLoginButtonPrefsWithFrame:(CGRect)frame title:(NSString *)title {
     UIButton* loginButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [loginButton setTitle:@"Login" forState:UIControlStateNormal];
+    [loginButton setTitle:title forState:UIControlStateNormal];
     [loginButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     loginButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.1 blue:0.2 alpha:1.0];
     loginButton.layer.cornerRadius = 10;
@@ -218,35 +283,25 @@
     
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathBash arg1:@"-c" arg2:commandToExecute arg3:nil];
-        //NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
-        self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
-        self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
-
-        if ([self checkIfUserPassedAuthentication] == NO) {
-            [self analyzeErrorsOrContinueTo2FA];
+        self.lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
+        if ([self.lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError]) {
+           [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:self.lastCommandResult[kJsonLevelError] hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }]; 
+        } else if ([self.lastCommandResult[kJsonResponseContent] containsString:@"2FA"]) {
+            [self dismissViewControllerAnimated:YES completion:^{
+                [self handle2FADialog];
+            }];
+        } else if ([self.lastCommandResult[kJsonKeySuccess] boolValue] == YES) {
+            [self userAuthenticated];
         }
     });
 }
 
-- (void)analyzeErrorsOrContinueTo2FA {
-    for (id obj in self.linesErrorOutput) {
-        if ([obj containsString:@"2FA"]) {
-            [self dismissViewControllerAnimated:YES completion:^{
-                [self handle2FADialog];
-            }];
-        } else if ([obj containsString:@"Missing value for"]) {
-            [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Please fill both your Apple ID Email and Password" hasTextfield:NO withTextfieldBlock:nil
-                    alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
-            }];
-        } else {
-            [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:obj hasTextfield:NO withTextfieldBlock:nil
-                    alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
-            }];
-        }
-    }
+- (void)userAuthenticated {
+    [self authToFile:self.lastCommandResult[@"name"]];
+    [self setTabNavigation];
 }
 
 - (void)handle2FADialog {
@@ -273,38 +328,16 @@
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword2FA, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text, twoFARes];
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathBash arg1:@"-c" arg2:commandToExecute arg3:nil];
-       // NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
-        self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
-        self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
-
-        if ([self checkIfUserPassedAuthentication] == NO) {
-            for (id obj in self.linesErrorOutput) {
-                if ([obj containsString:@"An unknown error has occurred"]) {
-                    [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Can't log you in\nCheck your Apple ID and password and try again" hasTextfield:NO withTextfieldBlock:nil
+        self.lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
+        if ([self.lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError] || twoFARes == nil || twoFARes.length == 0) {
+           [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:self.lastCommandResult[kJsonLevelError] hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
-                    }];
-                } else {
-                    [self dismissViewControllerAnimated:YES completion:^{
-                        [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:obj hasTextfield:NO withTextfieldBlock:nil
-                            alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
-                    }];
-                }
-            }
+            }]; 
+        } else if ([self.lastCommandResult[kJsonKeySuccess] boolValue] == YES) {
+            [self userAuthenticated];
         }
     });
-}
-
-- (BOOL)checkIfUserPassedAuthentication {
-    for (id obj in self.linesStandardOutput) {
-        if ([obj containsString:@"Authenticated as"]) {
-            [self authToFile:obj];
-            [self setTabNavigation];
-            return YES;
-        }
-    }
-    return NO;
 }
 
 - (void)authToFile:(NSString *)authNameFromOutput {

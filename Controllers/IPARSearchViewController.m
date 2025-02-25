@@ -1,5 +1,5 @@
 #import "IPARSearchViewController.h"
-#import "IPARCountryTableViewController.h"
+#import "IPARCountryTableViewController_deprecated.h"
 #import "../Utils/IPARUtils.h"
 #import "../Cells/IPARAppCell.h"
 #import "../Extensions/IPARConstants.h"
@@ -9,6 +9,7 @@
 @property (nonatomic) NSMutableArray *searchResults;
 @property (nonatomic) NSMutableArray *linesStandardOutput;
 @property (nonatomic) NSMutableArray *linesErrorOutput;
+@property (nonatomic) NSDictionary *lastCommandResult;
 @property (nonatomic) UILabel *noDataLabel;
 @property (nonatomic) NSString *latestSearchTerm;
 @property (nonatomic) NSInteger limitSearch;
@@ -21,9 +22,9 @@
 - (instancetype)init {
     self = [super init];
     if (self) {
-       	self.title = @"Search";
+       	self.title = kSearchTitle;
 		self.tabBarItem.image = [UIImage systemImageNamed:kTabbarSearchingSectionSystemImage];
-		self.tabBarItem.title = @"Search";
+		self.tabBarItem.title = kSearchTitle;
     }
     return self;
 }
@@ -34,11 +35,12 @@
     _searchResults = [NSMutableArray array];
     _linesStandardOutput = [NSMutableArray array];
     _linesErrorOutput = [NSMutableArray array];
+    _lastCommandResult = [NSDictionary dictionary];
     _latestSearchTerm = [NSString string];
     _limitSearch = APPS_SEARCH_INITIAL_LIMIT;
     [self setupTableviewProps];
     [self setupNoDataLabel];
-    [self setupCountryButton];
+    //[self setupCountryButton];
     [self _setUpNavigationBar];
 }
 
@@ -70,7 +72,7 @@
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];                                                   
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
     self.navigationItem.leftBarButtonItem = self.countryButton;
-    self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Search"];
+    self.countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:kSearchTitle];
 }
 
 - (void)countryButtonItemTapped:(id)sender {
@@ -121,7 +123,7 @@
                                                             preferredStyle:UIAlertControllerStyleAlert];
     } else {
         alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"Searching for '%@' in the Appstore", self.latestSearchTerm]
-                                                                message:[NSString stringWithFormat:@"Country Selected: %@\n\n\n\n", [IPARUtils emojiFlagForISOCountryCode:self.lastCountrySelected]]
+                                                                message:@"\n\n\n\n"
                                                             preferredStyle:UIAlertControllerStyleAlert];
     }
 
@@ -129,67 +131,43 @@
     [self presentViewController:alert animated:YES completion:nil];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-        NSString *commandToExecute = [NSString stringWithFormat:kSearchCommandPathTermLimitCountry, kIpatoolScriptPath, self.latestSearchTerm, self.limitSearch, self.lastCountrySelected];
-        NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathBash arg1:@"-c" arg2:commandToExecute arg3:nil];
-        //NSDictionary *standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:commandToExecute];
-        self.linesStandardOutput = standardAndErrorOutputs[kstdOutput];
-        self.linesErrorOutput = standardAndErrorOutputs[kerrorOutput];
-    
-        dispatch_async(dispatch_get_main_queue(), ^{
-            if ([self isErrorExists] == NO) {
+        NSString *commandToExecute = [NSString stringWithFormat:kSearchCommandPathTermLimitCountry, kIpatoolScriptPath, self.latestSearchTerm, self.limitSearch];
+        self.lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
+        if ([self.lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError]) {
+           [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:self.lastCommandResult[kJsonLevelError] hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }]; 
+        } else if ([self.lastCommandResult[@"count"] intValue] == 0) {
+           [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:[NSString stringWithFormat:@"Nothing was found when searching for %@", self.latestSearchTerm] hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }]; 
+        } else {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self dismissViewControllerAnimated:YES completion:nil];
                 [self populateTableWithSearchResults];
-            }
-        });
+            });
+        }
     });
 }
 
-- (BOOL)isErrorExists {
-    NSString *errorToShow = [NSString string];
-    for (NSString *obj in self.linesErrorOutput) {
-        if ([obj isEqualToString:@""] == NO) {
-            if ([obj containsString:@"No results found"]) {
-                errorToShow = [NSString stringWithFormat:@"No apps containing keyword: '%@' were found in the AppStore",self.latestSearchTerm];
-            } else {
-                errorToShow = obj;
-            }
-            [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:errorToShow hasTextfield:NO withTextfieldBlock:nil
-                alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
-            }];
-            return YES;
-        } 
-    }
-    [self dismissViewControllerAnimated:YES completion:nil];
-    return NO;
-}
-
 - (void)populateTableWithSearchResults {
-    [self.searchResults removeAllObjects];           
-    for (NSString *obj in self.linesStandardOutput) {
-        // I wonder if i need to show only relevant results, or whatever crap the answer is bringing..
-        if (obj.length > 0 && [obj containsString:@"==>"] == NO /*&& [obj.lowercaseString containsString:self.latestSearchTerm]*/) {
-            [self.searchResults addObject:obj];
-        } 
-    }
-    [self parseSearchResults];
-    [self.tableView reloadData];
-}
-
-- (void)parseSearchResults {
-    NSArray *parsedAppBundle = [IPARUtils parseDetailFromStringByRegex:self.searchResults regex:@":\\s*(\\S+)\\s*\\("];
-    NSArray *parsedAppName = [IPARUtils parseDetailFromStringByRegex:self.searchResults regex:@"^\\d+\\.\\s*([^:-]+)"];
-    NSArray *parsedAppVersion = [IPARUtils parseAppVersionFromStrings:self.searchResults];
-
-    for (int i=0; i<[[self.searchResults copy] count]; i++) {
-        if (i < [parsedAppName count] && i < [parsedAppVersion count] && i < [parsedAppBundle count]) {
-            NSMutableDictionary *dictForApp = [NSMutableDictionary dictionary];
-            dictForApp[kAppnameIndex] = parsedAppName[i];
-            dictForApp[kAppBundleIndex] = parsedAppBundle[i];
-            dictForApp[kAppVersionIndex] = parsedAppVersion[i];
-            dictForApp[kAppimageIndex] = [IPARUtils getAppIconFromApple:parsedAppBundle[i]] ? : [UIImage systemImageNamed:kUnknownSystemImage];
-            self.searchResults[i] = dictForApp;
-        }
-    }
+    [self.searchResults removeAllObjects];
+    for (NSDictionary *dictForApp in self.lastCommandResult[@"apps"]) {
+        NSMutableDictionary *appResultDict = [NSMutableDictionary dictionary];
+        appResultDict = [dictForApp mutableCopy];
+        [IPARUtils getAppIconFromApple:dictForApp[kAppBundleIndex] completion:^(UIImage * _Nullable appIcon) {
+            if (appIcon) {
+                appResultDict[kAppimageIndex] = appIcon;
+            } else {
+                appResultDict[kAppimageIndex] = [UIImage systemImageNamed:kUnknownSystemImage];
+            }
+            [self.searchResults addObject:appResultDict];
+            [self.tableView reloadData];
+        }];
+    }        
+    
 }
 
 #pragma mark - Table View Data Source
