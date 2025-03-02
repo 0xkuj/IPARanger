@@ -176,7 +176,7 @@
                                                       image:[UIImage systemImageNamed:kFolderIcon] 
                                                  identifier:nil 
                                                     handler:^(__kindof UIAction * _Nonnull action) {
-        [self openInFilza:nil];
+        [self openInFilza:kIPARangerDocumentsPath];
     }];
     
     UIAction *deleteCacheAction = [UIAction actionWithTitle:@"Delete Cache Folder" 
@@ -184,13 +184,12 @@
                                                  identifier:nil 
                                                     handler:^(__kindof UIAction * _Nonnull action) {
                                                         
-        unsigned long long cacheFolderSize = [IPARUtils calculateFolderSize:[NSString stringWithFormat:@"%@cacheDir/", kIPARangerDocumentsPath]];
+        unsigned long long cacheFolderSize = [IPARUtils calculateFolderSize:kIPARangerCacheDirPath];
         NSString *folderSizeString = [IPARUtils humanReadableSizeForBytes:cacheFolderSize];
         AlertActionBlock alertBlockConfirm = ^(void) {
-                NSString *cachePath = [NSString stringWithFormat:@"%@cacheDir/", kIPARangerDocumentsPath];
                 NSFileManager *fileManager = [NSFileManager defaultManager];
                 NSError *error;
-                [fileManager removeItemAtPath:cachePath error:nil];
+                [fileManager removeItemAtPath:kIPARangerCacheDirPath error:nil];
         };
         
         [self dismissViewControllerAnimated:YES completion:^{
@@ -258,14 +257,13 @@
     NSArray *ipaFiles = [self getIPAFilesFromDocumentsDirectory];
     [self.existingApps removeAllObjects];
 
-    NSString *cachePath = [self appCachePath];
-    NSMutableDictionary *cachedData = [self loadAppCacheFromPath:cachePath];
+    NSMutableDictionary *cachedData = [self loadAppCacheFromPath:kIPARangerAppsCacheDirPath];
 
     for (NSString *fileName in ipaFiles) {
         [self processIPAFile:fileName withCachedData:cachedData];
     }
     
-    [cachedData writeToFile:cachePath atomically:YES];
+    [cachedData writeToFile:kIPARangerAppsCacheDirPath atomically:YES];
 }
 
 - (NSArray *)getIPAFilesFromDocumentsDirectory {
@@ -279,10 +277,6 @@
     
     NSPredicate *predicate = [NSPredicate predicateWithFormat:kPredicateIPAApps];
     return [files filteredArrayUsingPredicate:predicate];
-}
-
-- (NSString *)appCachePath {
-    return [NSString stringWithFormat:@"%@cacheDir/AppCache.plist", kIPARangerDocumentsPath];
 }
 
 - (NSMutableDictionary *)loadAppCacheFromPath:(NSString *)cachePath {
@@ -335,9 +329,8 @@
     NSString *humanReadableSize = [IPARUtils humanReadableSizeForBytes:fileSize];
     
     NSString *ipaFilePath = [NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, fileName];
-    NSString *tempDir = [NSString stringWithFormat:@"%@cacheDir/TEMP", kIPARangerDocumentsPath];
     
-    IPARAppInfo *appInfo = [self extractAppInfoFromIPA:ipaFilePath toTempFolder:tempDir];
+    IPARAppInfo *appInfo = [self extractAppInfoFromIPA:ipaFilePath toTempFolder:kIPARangerCacheDirTempPath];
     if (!appInfo) {
         return nil;
     }
@@ -382,7 +375,7 @@
     
     NSString *appName = [self extractAppNameFromPlist:infoPlistPath];
     
-    NSString *cacheDir = [NSString stringWithFormat:@"%@cacheDir/%@/", kIPARangerDocumentsPath, bundleID];
+    NSString *cacheDir = [NSString stringWithFormat:@"%@%@/", kIPARangerCacheDirPath, bundleID];
     [self createDirectoryIfNeeded:cacheDir];
     
     [IPARUtils setupTaskAndPipesWithCommandposix:kLaunchPathMv arg1:infoPlistPath arg2:cacheDir arg3:nil];
@@ -437,7 +430,7 @@
         [self showDownloadDialog];
         self.currentPrecentageDownload = 0;
         [self.progressView setProgress:0.0f];
-        NSString *commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath];
+        NSString *commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, kDownloadProgressFileOutput];
         NSDictionary *lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
         // this means we had errors trying to run download..
         if ([lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError]) {
@@ -581,7 +574,7 @@
 
     // Create actions
     UIAlertAction *openInFilzaAction = [UIAlertAction actionWithTitle:@"Open in Filza" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-       [self openInFilza:self.existingApps[indexPath.row][kFilenameIndex]];
+       [self openInFilza:[NSString stringWithFormat:@"%@%@", kIPARangerDocumentsPath, self.existingApps[indexPath.row][kFilenameIndex]]];
     }];
     UIAlertAction *shareAction = [UIAlertAction actionWithTitle:@"Share" style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
         [self shareFile:self.existingApps[indexPath.row][kFilenameIndex]];
@@ -742,7 +735,7 @@
 
 - (void)openInFilza:(NSString *)pathToFile {
 	UIApplication *application = [UIApplication sharedApplication];
-	NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:kFilzaScheme, kIPARangerDocumentsPath, pathToFile]];
+	NSURL *URL = [NSURL URLWithString:[NSString stringWithFormat:@"%@%@", kFilzaScheme, pathToFile]];
 	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
 }
 

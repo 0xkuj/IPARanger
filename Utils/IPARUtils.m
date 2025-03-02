@@ -13,7 +13,6 @@ int spawnedProcessPid;
 
 @implementation IPARUtils
 + (NSDictionary *)executeCommandAndGetJSON:(NSString *)launchPath arg1:(NSString *)arg1 arg2:(NSString *)arg2 arg3:(NSString *)arg3 {
-    // Validate input
     if (!launchPath.length) {
         return @{kJsonLevel: kJsonLevelError, kJsonLevelError : @"Launch path cannot be empty" };
     }
@@ -27,7 +26,6 @@ int spawnedProcessPid;
 
     int fileDescriptor = -1;
     if (isDownload) {
-        // Open the file for writing
         fileDescriptor = open(kIPARangerLatestDownloadLogPath, O_CREAT | O_WRONLY | O_TRUNC, 0644);
         if (fileDescriptor == -1) {
             close(stdout_pipe[0]);
@@ -63,17 +61,15 @@ int spawnedProcessPid;
 
     spawnedProcessPid = pid;
     if (isDownload) {
-        close(fileDescriptor); // Close file descriptor
+        close(fileDescriptor);
         close(stdout_pipe[0]);
         close(stdout_pipe[1]);
         
-        // Return success so you can track the file separately
         return @{kJsonLevel: kJsonLevelInfo, kJsonResponseContent : @"Download started. Progress written to file."};
     }
 
-    close(stdout_pipe[1]);  // Close write end
+    close(stdout_pipe[1]); 
 
-    // Read JSON output
     NSMutableData *outputData = [NSMutableData data];
     char buffer[4096];
     ssize_t bytesRead;
@@ -82,12 +78,10 @@ int spawnedProcessPid;
         [outputData appendBytes:buffer length:bytesRead];
     }
     
-    close(stdout_pipe[0]);  // Close read end
+    close(stdout_pipe[0]); 
 
-    // Wait for process to finish
     waitpid(pid, NULL, 0);
-
-    // Parse JSON
+    
     NSError *jsonError = nil;
     NSDictionary *jsonResult = [NSJSONSerialization JSONObjectWithData:outputData 
                                                              options:0 
