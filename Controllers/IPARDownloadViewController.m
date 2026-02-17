@@ -57,7 +57,10 @@
     BOOL directoryExists = [fileManager fileExistsAtPath:kIPARangerDocumentsPath isDirectory:&isDirectory];
     NSError *error = nil;
     if ((directoryExists && isDirectory) == NO) {
-        created = [fileManager createDirectoryAtPath:kIPARangerDocumentsPath withIntermediateDirectories:YES attributes:nil error:nil];
+        created = [fileManager createDirectoryAtPath:kIPARangerDocumentsPath withIntermediateDirectories:YES attributes:nil error:&error];
+        if (created == NO) {
+            NSLog(@"Error creating directory: %@", error.localizedDescription);
+        }
     }
     [self setupTableviewPropsAndBackground];
     [self setupProgressViewCenter];

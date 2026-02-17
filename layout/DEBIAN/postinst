@@ -4,8 +4,10 @@
 CHECK_ROOTLESS="/var/jb/"
 if [ -d $CHECK_ROOTLESS ]; then
     FILES_DIR="/var/jb/Library/IPARanger/"
+    BINARY_DIR="/var/jb/Applications/IPARanger.app/ipatool"
 else
     FILES_DIR="/var/mobile/Documents/IPARanger/"
+    BINARY_DIR="/var/mobile/Applications/IPARanger.app/ipatool"
 fi
 
 if [ -d $FILES_DIR ]; then
@@ -17,6 +19,8 @@ fi
 
 echo "Settings up permissions to the main files directory..."
 chown -R 501:501 $FILES_DIR
+chmod +x $BINARY_DIR
+
 if [ $? -ne 0 ]; then
   echo "Settings up permissions FAILED with exit status $?. this may cause unexpected behavior"
 else
