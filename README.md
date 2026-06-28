@@ -7,6 +7,7 @@ This app is meant for jailbroken devices, but may support non-jailbroken devices
   * Install dependencies (gawk, unzip, appsync unified) as these are required to run some commands / install the IPAs you download
   * Install the deb file containing the package either from packages directory or from havoc repository.
   
+
 # Usage 
 This app consists mainly 4 screens.
 Login - Where you will input your Apple ID and Apple ID password:
