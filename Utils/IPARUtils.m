@@ -2,6 +2,8 @@
 #include <spawn.h>
 #include <signal.h>
 #import "../Extensions/IPARConstants.h"
+#import "../Views/IPARDialog.h"
+#import "../Controllers/IPARLoginScreenViewController.h"
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -89,17 +91,36 @@ int spawnedProcessPid;
     close(stdout_pipe[0]); 
 
     waitpid(pid, NULL, 0);
-    
-    NSError *jsonError = nil;
-    NSDictionary *jsonResult = [NSJSONSerialization JSONObjectWithData:outputData 
-                                                             options:0 
-                                                               error:&jsonError];
 
-    if (jsonError) {
+    // ipatool can emit multiple newline-separated JSON objects on stdout — for
+    // example an informational line ({"level":"info","message":"preparing
+    // authentication; the first login may take a few minutes"}) followed by the
+    // actual result line. Feeding that whole blob to NSJSONSerialization fails
+    // because it is not a single JSON document. Instead, parse line-by-line and
+    // keep the last valid JSON object, which is always the final result. This is
+    // also correct for the older single-line output (its only line is the last),
+    // so it stays backwards compatible.
+    NSString *outputString = [[NSString alloc] initWithData:outputData encoding:NSUTF8StringEncoding];
+    NSArray<NSString *> *lines = [outputString componentsSeparatedByCharactersInSet:[NSCharacterSet newlineCharacterSet]];
+    NSDictionary *lastJson = nil;
+    for (NSString *line in lines) {
+        NSString *trimmed = [line stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+        if (trimmed.length == 0) {
+            continue;
+        }
+        NSData *lineData = [trimmed dataUsingEncoding:NSUTF8StringEncoding];
+        NSError *lineError = nil;
+        id parsed = [NSJSONSerialization JSONObjectWithData:lineData options:0 error:&lineError];
+        if (!lineError && [parsed isKindOfClass:[NSDictionary class]]) {
+            lastJson = (NSDictionary *)parsed;
+        }
+    }
+
+    if (lastJson == nil) {
         return @{kJsonLevel: kJsonLevelError, kJsonLevelError : @"Failed to parse JSON output" };
     }
 
-    return jsonResult;
+    return lastJson;
 }
 
 + (NSDictionary *)setupTaskAndPipesWithCommandposix:(NSString *)launchPath arg1:(NSString *)arg1 
@@ -295,6 +316,24 @@ NSData *readDataFromFD(int fd) {
 	[application openURL:URL options:@{} completionHandler:^(BOOL success) {return;}];
 }
 
+static BOOL sGuestMode = NO;
+
++ (BOOL)isGuestMode {
+    return sGuestMode;
+}
+
++ (void)setGuestMode:(BOOL)guest {
+    sGuestMode = guest;
+}
+
++ (void)switchToLoginScreen {
+    [self setGuestMode:NO];
+    IPARLoginScreenViewController *loginVC = [[IPARLoginScreenViewController alloc] init];
+    UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:loginVC];
+    UIWindow *window = UIApplication.sharedApplication.delegate.window;
+    window.rootViewController = navController;
+}
+
 + (void)getAppIconFromApple:(NSString *)bundleId completion:(void (^)(UIImage *appIcon))completion {
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
         NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:kItunesImagesForBundleURL, bundleId]];
@@ -363,35 +402,41 @@ NSData *readDataFromFD(int fd) {
                     withCancelText:(NSString *)cancelText
                     presentOn:(id)viewController {
 
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
+    IPARDialog *dialog = [IPARDialog dialogWithTitle:title message:message];
+
     if (hasTextfield == YES) {
-        [alert addTextFieldWithConfigurationHandler:^(UITextField * _Nonnull textField) {
-            textFieldBlock(textField);
-        }];
-    }
-    if ([confirmText length] != 0) {
-        UIAlertAction *confirmAction = [UIAlertAction actionWithTitle:confirmText style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
-            if (confirmationBlock != nil) {
-                if (hasTextfield == YES) {
-                    confirmationBlock(alert.textFields.firstObject);
-                } else {
-                    confirmationBlock(nil);
-                }
+        [dialog addTextFieldWithConfiguration:^(UITextField *textField) {
+            if (textFieldBlock != nil) {
+                textFieldBlock(textField);
             }
         }];
-        [alert addAction:confirmAction];
+    }
+
+    __weak IPARDialog *weakDialog = dialog;
+    if ([confirmText length] != 0) {
+        [dialog addButtonWithTitle:confirmText style:IPARDialogButtonStylePrimary handler:^{
+            if (confirmationBlock != nil) {
+                confirmationBlock(hasTextfield == YES ? weakDialog.textField : nil);
+            }
+        }];
     }
 
     if ([cancelText length] != 0) {
-        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:cancelText style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
+        [dialog addButtonWithTitle:cancelText style:IPARDialogButtonStyleCancel handler:^{
             if (cancelBlock != nil) {
                 cancelBlock();
             }
         }];
-        [alert addAction:cancelAction];
     }
-    
-    [viewController presentViewController:alert animated:YES completion:nil];
+
+    [dialog presentOn:viewController];
+}
+
++ (IPARDialog *)presentLoadingDialogWithMessage:(NSString *)message on:(UIViewController *)viewController {
+    IPARDialog *dialog = [IPARDialog dialogWithTitle:nil message:message];
+    [dialog showSpinner];
+    [dialog presentOn:viewController];
+    return dialog;
 }
 
 + (UIActivityIndicatorView *)createActivitiyIndicatorWithPoint:(CGPoint)point {

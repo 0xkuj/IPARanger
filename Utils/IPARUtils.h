@@ -18,6 +18,8 @@
 @property(copy) NSString *currentDirectoryPath;
 @end
 
+@class IPARDialog;
+
 typedef void (^AlertActionBlock)(void);
 typedef void (^AlertActionBlockWithTextField)(UITextField *);
 typedef void (^AlertTextFieldBlock)(UITextField *);
@@ -46,9 +48,19 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
                     withCancelText:(NSString *)cancelText
                     presentOn:(id)viewController;
 + (UIActivityIndicatorView *)createActivitiyIndicatorWithPoint:(CGPoint)point;
++ (IPARDialog *)presentLoadingDialogWithMessage:(NSString *)message on:(UIViewController *)viewController;
 + (void)cancelScript;
 + (UIButton *)createButtonWithImageName:(NSString *)imageName title:(NSString *)title fontSize:(CGFloat)fontSize selectorName:(NSString *)selectorName frame:(CGRect)frame;
 + (unsigned long long)calculateFolderSize:(NSString *)folderPath;
 + (void)openGithub;
++ (void)openTW;
++ (void)openPP;
+
+// Guest mode: the user is browsing already-downloaded IPAs without signing in.
+// Per session only (never persisted), so login stays the default launch screen.
++ (BOOL)isGuestMode;
++ (void)setGuestMode:(BOOL)guest;
+// Swaps the window root back to the login screen (also clears guest mode).
++ (void)switchToLoginScreen;
 @end
 

@@ -5,6 +5,7 @@
 #import "../Utils/IPARUtils.h"
 #import "../Extensions/IPARConstants.h"
 #import "../Cells/IPARAppCell.h"
+#import "../Views/IPARDialog.h"
 
 #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -12,10 +13,9 @@
 
 @interface IPARDownloadViewController () 
 @property (nonatomic, strong) NSMutableArray *existingApps;
-@property (nonatomic) UIProgressView *progressView;
 @property (nonatomic) NSString *currentPrecentageDownload;
 @property (nonatomic) UIViewController *downloadViewController;
-@property (nonatomic) UIAlertController *downloadAlertController;
+@property (nonatomic) IPARDialog *downloadDialog;
 @property (nonatomic, strong) NSMutableArray *linesErrorOutput;
 @property (nonatomic) NSString *lastBundleDownload;
 @property (nonatomic) NSTimer *downloadTimer;
@@ -46,9 +46,7 @@
     _lastBundleDownload = [NSString string];
     _linesErrorOutput = [NSMutableArray array];
     _lastCountrySelected = [NSString string];
-    _downloadAlertController = [UIAlertController alertControllerWithTitle:nil message:nil preferredStyle:UIAlertControllerStyleAlert];
     _countryTableViewController = [[IPARCountryTableViewController alloc] initWithCaller:@"Downloader"];
-    _progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
     _noDataLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, self.tableView.bounds.size.width, self.tableView.bounds.size.height)];
     _downloadViewController = [[UIViewController alloc] init];
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -63,20 +61,11 @@
         }
     }
     [self setupTableviewPropsAndBackground];
-    [self setupProgressViewCenter];
     //deprecated
     //[self setupCountryButton];
-    [self setupDownloadAlertController];
     [self _setUpNavigationBar2];
     [self setupDownloadViewControllerStyle];
     [self refreshTableData];
-}
-
-- (void)setupDownloadAlertController {
-    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-        [IPARUtils cancelScript];
-    }];
-    [self.downloadAlertController addAction:cancelAction];
 }
 
 - (void)setupCountryButton {
@@ -90,10 +79,6 @@
     [self.countryButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(updateCountry) name:kIPARCountryChangedNotification object:nil];
     self.navigationItem.leftBarButtonItems = @[_countryButton];
-}
-
-- (void)setupProgressViewCenter {
-    self.progressView.center = CGPointMake(self.downloadViewController.view.frame.size.width/2, self.downloadViewController.view.frame.size.height/2);
 }
 
 - (void)setupTableviewPropsAndBackground {
@@ -124,11 +109,7 @@
 }
 
 - (void)refreshTableData {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Loading Downloaded Apps.."
-                                                                message:@"\n\n\n"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 75)]];
-    [self presentViewController:alert animated:YES completion:nil];
+    [IPARUtils presentLoadingDialogWithMessage:@"Loading downloaded apps…" on:self];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         [self populateTableWithExistingApps];
@@ -169,8 +150,14 @@
     NSDictionary *attributes = @{NSFontAttributeName:font};
     [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateHighlighted];
     [deleteAllButton setTitleTextAttributes:attributes forState:UIControlStateNormal];
-    UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:kDownloadSystemImage] style:UIBarButtonItemStylePlain target:self action:@selector(downloadButtonTapped:)];
-    self.navigationItem.rightBarButtonItems = @[deleteAllButton, downloadButton];
+    if ([IPARUtils isGuestMode]) {
+        // Guests can browse/install/delete already-downloaded IPAs, but downloading
+        // a new app needs an Apple ID, so the download action is hidden for them.
+        self.navigationItem.rightBarButtonItems = @[deleteAllButton];
+    } else {
+        UIBarButtonItem *downloadButton = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:kDownloadSystemImage] style:UIBarButtonItemStylePlain target:self action:@selector(downloadButtonTapped:)];
+        self.navigationItem.rightBarButtonItems = @[deleteAllButton, downloadButton];
+    }
     [self setupDownloadsMenu];
 }
 
@@ -432,7 +419,7 @@
         }
         [self showDownloadDialog];
         self.currentPrecentageDownload = 0;
-        [self.progressView setProgress:0.0f];
+        [self.downloadDialog setProgress:0.0f];
         NSString *commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, kDownloadProgressFileOutput];
         NSDictionary *lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
         // this means we had errors trying to run download..
@@ -527,7 +514,7 @@
         NSString *percentage = [fileContents substringWithRange:percentageRange];
         dispatch_async(dispatch_get_main_queue(), ^{
             self.currentPrecentageDownload = percentage;
-            [self.progressView setProgress:[percentage floatValue] / 100];
+            [self.downloadDialog setProgress:[percentage floatValue] / 100];
         });
     }
 }
@@ -617,12 +604,7 @@
 - (void)installApplication:(NSString *)ipaFilePath appName:(NSString *)appName {
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         __block NSDictionary *standardAndErrorOutputs = [NSDictionary dictionary];
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:kIPARangerInstallationHeadline
-                                                                    message:[NSString stringWithFormat:@"\n\n\nInstalling Application '%@'", appName]
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-
-        [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 95)]];
-        [self presentViewController:alert animated:YES completion:nil];
+        [IPARUtils presentLoadingDialogWithMessage:[NSString stringWithFormat:@"Installing “%@”…", appName] on:self];
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         standardAndErrorOutputs = [IPARUtils setupTaskAndPipesWithCommand:[NSString stringWithFormat:@"%@ %@%@", kAppinstScriptPath, kIPARangerDocumentsPath, ipaFilePath]];
             //Successfully installed
@@ -784,14 +766,19 @@
 }
 
 - (void)showDownloadDialog {
-    self.downloadAlertController.title = kIPARangerDownloadingMessage;
-    self.downloadAlertController.message = [NSString stringWithFormat:@"Downloading requested bundle: %@\n\n", self.lastBundleDownload];
-    self.progressView.frame = CGRectMake(15, 120, 230, 5);
-    [self.downloadAlertController.view addSubview:self.progressView];
-    [self presentViewController:self.downloadAlertController animated:YES completion:nil];
+    self.downloadDialog = [IPARDialog dialogWithTitle:@"Downloading"
+                                              message:[NSString stringWithFormat:@"%@", self.lastBundleDownload]];
+    [self.downloadDialog showProgress];
+    __weak typeof(self) weakSelf = self;
+    [self.downloadDialog addButtonWithTitle:@"Cancel" style:IPARDialogButtonStyleCancel handler:^{
+        [IPARUtils cancelScript];
+        [weakSelf.downloadTimer invalidate];
+        weakSelf.downloadTimer = nil;
+    }];
+    [self.downloadDialog presentOn:self];
 }
 
 - (void)updateProgressBar {
-    [self.progressView setProgress:[self.currentPrecentageDownload floatValue]/100];
+    [self.downloadDialog setProgress:[self.currentPrecentageDownload floatValue]/100];
 }
 @end

@@ -4,6 +4,7 @@
 #import "IPARAccountAndCreditsController.h"
 #import "../Utils/IPARUtils.h"
 #import "../Extensions/IPARConstants.h"
+#import "../Views/IPARDialog.h"
 
 @interface IPARLoginScreenViewController ()
 @property (nonatomic) IBOutlet UITextField *emailTextField;
@@ -11,24 +12,22 @@
 @property (nonatomic) UIButton *loginButton;
 @property (nonatomic) UIButton *eyeButton;
 @property (nonatomic) NSDictionary *lastCommandResult;
-@property (nonatomic) UILabel *underLabel;
+@property (nonatomic) UIScrollView *scrollView;
+@property (nonatomic) UILabel *titleLabel;
 @property (nonatomic) int welcomeMessageCounter;
 @property (nonatomic) NSTimer *welcomeMessageTimer;
 @end
 
 @implementation IPARLoginScreenViewController
+
 - (void)loadView {
     [super loadView];
     _lastCommandResult = [NSDictionary dictionary];
     self.welcomeMessageCounter = 10;
     self.welcomeMessageTimer = nil;
     self.navigationController.navigationBarHidden = YES;
-    [self setLoginButtons];
-    [self configureMainScreenGradient];
-    [self setupTextAndAnimations];
-    [self setupVersionLabel];
-    [self setupGHLabel];
-    [self setupXLabel];
+    self.view.backgroundColor = [UIColor systemBackgroundColor];
+    [self buildUI];
 }
 
 - (void)viewDidAppear:(BOOL)animated {
@@ -38,159 +37,285 @@
     }
 }
 
-- (void)showFirstTimeAlert {
-    if (self.welcomeMessageTimer != nil) {
-        [self.welcomeMessageTimer invalidate];
-    }
-    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Welcome to IPA Ranger!"
-                                                                             message:@"This app is an open source project I worked hard to maintain. Your account and password will be sent directly to Apple servers and will not be saved on your device.\n\nIf you have any concerns, please check out the source code below (and consider dropping a star there as well ;) )\n\nEnjoy!"
-                                                                      preferredStyle:UIAlertControllerStyleAlert];
-    
-     __weak typeof(self) weakSelf = self;
-    UIAlertAction *githubAction = [UIAlertAction actionWithTitle:@"Checkout IPA Ranger Code"
-                                                          style:UIAlertActionStyleDefault
-                                                        handler:^(UIAlertAction * _Nonnull action) {
-                                                            [IPARUtils openGithub];
-                                                            [weakSelf showFirstTimeAlert];
-                                                        }];
-    
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK (10...)"
-                                                       style:UIAlertActionStyleDefault
-                                                     handler:^(UIAlertAction * _Nonnull action) {
-                                                         [IPARUtils saveKeyToFile:kFirstLaunchKey withValue:kFirstLaunchDoneKey];
-                                                     }];
+#pragma mark - UI construction
 
-    [alertController addAction:githubAction];
-    [alertController addAction:okAction];
-    okAction.enabled = NO;
-    [self presentViewController:alertController animated:YES completion:^{
-            self.welcomeMessageTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 repeats:YES block:^(NSTimer * _Nonnull timer) {
-            self.welcomeMessageCounter--;
-            if (self.welcomeMessageCounter > 0) {
-                [okAction setValue:[NSString stringWithFormat:@"OK (%d...)", self.welcomeMessageCounter] forKey:@"title"];
-            } else {
-                [okAction setValue:@"OK" forKey:@"title"];
-                okAction.enabled = YES;
-                [self.welcomeMessageTimer invalidate];
-            }
-        }];
-    }];
-}
+- (void)buildUI {
+    UIScrollView *scrollView = [[UIScrollView alloc] init];
+    scrollView.translatesAutoresizingMaskIntoConstraints = NO;
+    scrollView.showsVerticalScrollIndicator = NO;
+    scrollView.alwaysBounceVertical = YES;
+    scrollView.keyboardDismissMode = UIScrollViewKeyboardDismissModeInteractive;
+    [self.view addSubview:scrollView];
+    self.scrollView = scrollView;
 
-- (void)setupTextAndAnimations {
-    UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(110, 100, 180, 130)];
-    textView.text = @"";
-    textView.textColor = [UIColor whiteColor];
-    textView.font = [UIFont systemFontOfSize:35];
-    textView.backgroundColor = [UIColor clearColor];
-    textView.editable = NO;
-    NSString *fullText = @"IPA Ranger";
-    for (int i = 0; i < fullText.length; i++) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * i * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            textView.text = [fullText substringToIndex:i+1];
-        });
-    }
+    UIStackView *stack = [[UIStackView alloc] init];
+    stack.axis = UILayoutConstraintAxisVertical;
+    stack.alignment = UIStackViewAlignmentFill;
+    stack.spacing = 14.0;
+    stack.translatesAutoresizingMaskIntoConstraints = NO;
+    [scrollView addSubview:stack];
 
-    [self setupUnderlabel];
-    [NSTimer scheduledTimerWithTimeInterval:3
-                                     target:self
-                                   selector:@selector(increaseAlpha)
-                                   userInfo:nil
-                                    repeats:NO];
+    UIView *header = [self makeHeader];
 
-    [self.view addSubview:textView];
-    [textView.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:16].active = YES;
-    [textView.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor].active = YES;
-}
-
-- (void)setupUnderlabel {
-    self.underLabel = [[UILabel alloc] initWithFrame:CGRectMake(85, 105, 220, 130)];
-	[self.underLabel setNumberOfLines:4];
-	self.underLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
-	[self.underLabel setText:@"\nGUI Based Application for ipatool\n\n Created by 0xkuj"];
-	[self.underLabel setBackgroundColor:[UIColor clearColor]];
-	self.underLabel.textColor = [UIColor whiteColor];
-	self.underLabel.textAlignment = NSTextAlignmentCenter;
-	self.underLabel.alpha = 0;
-    [self.view addSubview:self.underLabel];
-}
-
-- (void)setupGHLabel {
-    UIButton *followMeGithub = [IPARUtils createButtonWithImageName:kGithubIcon title:@"Source Code" fontSize:16.0 selectorName:@"openGithub" frame:CGRectMake(0,0,150,50)];
-    [self.view addSubview:followMeGithub];
-    [NSLayoutConstraint activateConstraints:@[
-        [followMeGithub.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        [followMeGithub.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-110]
-    ]];
-}
-
-- (void)setupXLabel {
-    UIButton *followMeTwitter = [IPARUtils createButtonWithImageName:kTwitterIcon title:@"Need help?" fontSize:16.0 selectorName:@"openTW" frame:CGRectMake(0,0,150,50)];
-    [self.view addSubview:followMeTwitter];
-    [NSLayoutConstraint activateConstraints:@[
-        [followMeTwitter.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        [followMeTwitter.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-60]
-    ]];
-}
-
-- (void)setupVersionLabel {
-    UILabel *versionLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-    versionLabel.translatesAutoresizingMaskIntoConstraints = NO;
-    versionLabel.text = kIPARangerVersion;
-    versionLabel.textColor = [UIColor whiteColor];
-    [self.view addSubview:versionLabel];
-    [NSLayoutConstraint activateConstraints:@[
-        [versionLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-        [versionLabel.bottomAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.bottomAnchor constant:-20]
-    ]];
-}
-
-/* provides the animation */
-- (void)increaseAlpha
-{
-	[UIView animateWithDuration:0.7 animations:^{
-		self.underLabel.alpha = 1;
-	}];
-}	
-
-- (void)setLoginButtons {
-    self.emailTextField = [self setTextFieldsViewWithFrame:CGRectMake(40, 230, self.view.frame.size.width - 80, 45) title:@"Apple ID Email"];
-    self.passwordTextField = [self setTextFieldsViewWithFrame:CGRectMake(40, 300, self.view.frame.size.width - 80, 45) title:@"Apple ID Password"];
-    self.passwordTextField.secureTextEntry = YES;
+    self.emailTextField = [self makeFieldWithPlaceholder:@"Apple ID email" iconSystemName:@"envelope.fill" secure:NO];
+    self.emailTextField.keyboardType = UIKeyboardTypeEmailAddress;
+    self.emailTextField.clearButtonMode = UITextFieldViewModeWhileEditing;
     self.emailTextField.delegate = self;
+
+    self.passwordTextField = [self makeFieldWithPlaceholder:@"Password" iconSystemName:@"lock.fill" secure:YES];
     self.passwordTextField.delegate = self;
-    self.loginButton = [self setLoginButtonPrefsWithFrame:CGRectMake(65, 420, self.view.frame.size.width - 130, 40) title:kLoginTitle];
-    [self configureEyeButton];
-    [self.view addSubview:self.emailTextField];
-    [self.view addSubview:self.passwordTextField];
-    [self.view addSubview:self.loginButton];
+    [self attachEyeToPasswordField];
+
+    self.loginButton = [self makeLoginButton];
+    UIButton *guestButton = [self makeGuestButton];
+
+    UIView *footer = [self makeFooter];
+
+    [stack addArrangedSubview:header];
+    [stack addArrangedSubview:self.emailTextField];
+    [stack addArrangedSubview:self.passwordTextField];
+    [stack addArrangedSubview:self.loginButton];
+    [stack addArrangedSubview:guestButton];
+    [stack addArrangedSubview:footer];
+
+    [stack setCustomSpacing:34 afterView:header];
+    [stack setCustomSpacing:20 afterView:self.passwordTextField];
+    [stack setCustomSpacing:10 afterView:self.loginButton];
+    [stack setCustomSpacing:34 afterView:guestButton];
+
+    UILayoutGuide *content = scrollView.contentLayoutGuide;
+    UILayoutGuide *frame = scrollView.frameLayoutGuide;
+    [NSLayoutConstraint activateConstraints:@[
+        [scrollView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+        [scrollView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+        [scrollView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+        [scrollView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+
+        [stack.topAnchor constraintEqualToAnchor:content.topAnchor constant:56],
+        [stack.bottomAnchor constraintEqualToAnchor:content.bottomAnchor constant:-28],
+        [stack.leadingAnchor constraintEqualToAnchor:content.leadingAnchor constant:28],
+        [stack.trailingAnchor constraintEqualToAnchor:content.trailingAnchor constant:-28],
+        [stack.widthAnchor constraintEqualToAnchor:frame.widthAnchor constant:-56],
+    ]];
+
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillShow:) name:UIKeyboardWillShowNotification object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(keyboardWillHide:) name:UIKeyboardWillHideNotification object:nil];
+
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(dismissKeyboard)];
+    tap.cancelsTouchesInView = NO;
+    [scrollView addGestureRecognizer:tap];
+
+    [self startTitleTypewriter];
 }
 
-- (void)configureMainScreenGradient {
-    CAGradientLayer *gradientLayer = [CAGradientLayer layer];
-    gradientLayer.frame = self.view.bounds;
-    gradientLayer.colors = @[
-        (id)[UIColor colorWithRed:30/255.0 green:50/255.0 blue:80/255.0 alpha:1.0].CGColor,
-        (id)[UIColor colorWithRed:50/255.0 green:85/255.0 blue:120/255.0 alpha:1.0].CGColor
-    ];
-    gradientLayer.startPoint = CGPointMake(0.5, 0.0);
-    gradientLayer.endPoint = CGPointMake(0.5, 1.0);
-    [self.view.layer insertSublayer:gradientLayer atIndex:0];
+- (UIView *)makeHeader {
+    UIStackView *header = [[UIStackView alloc] init];
+    header.axis = UILayoutConstraintAxisVertical;
+    header.alignment = UIStackViewAlignmentCenter;
+    header.spacing = 14.0;
+
+    // App icon in a rounded-square badge with a soft shadow.
+    UIView *iconWrap = [[UIView alloc] init];
+    iconWrap.translatesAutoresizingMaskIntoConstraints = NO;
+    iconWrap.layer.shadowColor = [UIColor blackColor].CGColor;
+    iconWrap.layer.shadowOpacity = 0.18;
+    iconWrap.layer.shadowRadius = 14.0;
+    iconWrap.layer.shadowOffset = CGSizeMake(0, 8);
+
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"AppIcon60x60"]];
+    icon.translatesAutoresizingMaskIntoConstraints = NO;
+    icon.contentMode = UIViewContentModeScaleAspectFill;
+    icon.layer.cornerRadius = 18.0;
+    icon.layer.cornerCurve = kCACornerCurveContinuous;
+    icon.clipsToBounds = YES;
+    [iconWrap addSubview:icon];
+
+    self.titleLabel = [[UILabel alloc] init];
+    self.titleLabel.font = [UIFont systemFontOfSize:30 weight:UIFontWeightBold];
+    self.titleLabel.textColor = [UIColor labelColor];
+    self.titleLabel.textAlignment = NSTextAlignmentCenter;
+
+    UILabel *subtitle = [[UILabel alloc] init];
+    subtitle.text = kIPARangerLoginSubtitle;
+    subtitle.font = [UIFont systemFontOfSize:15 weight:UIFontWeightRegular];
+    subtitle.textColor = [UIColor secondaryLabelColor];
+    subtitle.textAlignment = NSTextAlignmentCenter;
+    subtitle.numberOfLines = 0;
+
+    [header addArrangedSubview:iconWrap];
+    [header addArrangedSubview:self.titleLabel];
+    [header addArrangedSubview:subtitle];
+    [header setCustomSpacing:18 afterView:iconWrap];
+    [header setCustomSpacing:6 afterView:self.titleLabel];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [iconWrap.widthAnchor constraintEqualToConstant:78],
+        [iconWrap.heightAnchor constraintEqualToConstant:78],
+        [icon.topAnchor constraintEqualToAnchor:iconWrap.topAnchor],
+        [icon.bottomAnchor constraintEqualToAnchor:iconWrap.bottomAnchor],
+        [icon.leadingAnchor constraintEqualToAnchor:iconWrap.leadingAnchor],
+        [icon.trailingAnchor constraintEqualToAnchor:iconWrap.trailingAnchor],
+    ]];
+    return header;
 }
 
-- (void)configureEyeButton {
+- (void)startTitleTypewriter {
+    NSString *fullText = @"IPA Ranger";
+    self.titleLabel.text = @"";
+    for (NSUInteger i = 0; i < fullText.length; i++) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.07 * (i + 1) * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            self.titleLabel.text = [fullText substringToIndex:i + 1];
+        });
+    }
+}
+
+- (UITextField *)makeFieldWithPlaceholder:(NSString *)placeholder iconSystemName:(NSString *)iconName secure:(BOOL)secure {
+    UITextField *field = [[UITextField alloc] init];
+    field.translatesAutoresizingMaskIntoConstraints = NO;
+    field.font = [UIFont systemFontOfSize:16];
+    field.textColor = [UIColor labelColor];
+    field.backgroundColor = [UIColor tertiarySystemFillColor];
+    field.layer.cornerRadius = 12.0;
+    field.layer.cornerCurve = kCACornerCurveContinuous;
+    field.autocorrectionType = UITextAutocorrectionTypeNo;
+    field.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    field.returnKeyType = UIReturnKeyDone;
+    field.secureTextEntry = secure;
+    field.attributedPlaceholder = [[NSAttributedString alloc] initWithString:placeholder
+        attributes:@{NSForegroundColorAttributeName: [UIColor secondaryLabelColor]}];
+
+    // Leading icon.
+    UIImageSymbolConfiguration *cfg = [UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIImageSymbolWeightRegular];
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:iconName withConfiguration:cfg]];
+    icon.tintColor = [UIColor tertiaryLabelColor];
+    icon.contentMode = UIViewContentModeCenter;
+    UIView *leftView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 42, 54)];
+    icon.frame = CGRectMake(14, 0, 22, 54);
+    [leftView addSubview:icon];
+    field.leftView = leftView;
+    field.leftViewMode = UITextFieldViewModeAlways;
+
+    [field.heightAnchor constraintEqualToConstant:54].active = YES;
+    return field;
+}
+
+- (void)attachEyeToPasswordField {
     self.eyeButton = [UIButton buttonWithType:UIButtonTypeCustom];
     [self.eyeButton setImage:[UIImage systemImageNamed:kPasswordEyeButtonOpen] forState:UIControlStateNormal];
+    self.eyeButton.tintColor = [UIColor tertiaryLabelColor];
     [self.eyeButton addTarget:self action:@selector(togglePasswordVisibility:) forControlEvents:UIControlEventTouchUpInside];
-    self.eyeButton.frame = CGRectMake(0, 0, 30, self.passwordTextField.frame.size.height);
-    UIView *rightView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 40, self.passwordTextField.frame.size.height)];
-    rightView.contentMode = UIViewContentModeRight;
+    self.eyeButton.frame = CGRectMake(0, 0, 30, 54);
+    UIView *rightView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 44, 54)];
     [rightView addSubview:self.eyeButton];
     self.passwordTextField.rightView = rightView;
     self.passwordTextField.rightViewMode = UITextFieldViewModeAlways;
 }
+
+- (UIButton *)makeLoginButton {
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    [button setTitle:kLoginTitle forState:UIControlStateNormal];
+    [button setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    button.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
+    button.backgroundColor = [IPARDialog accentColor];
+    button.layer.cornerRadius = 14.0;
+    button.layer.cornerCurve = kCACornerCurveContinuous;
+    [button addTarget:self action:@selector(handleLoginEmailPass) forControlEvents:UIControlEventTouchUpInside];
+    [button addTarget:self action:@selector(loginButtonDown:) forControlEvents:UIControlEventTouchDown];
+    [button addTarget:self action:@selector(loginButtonUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+    [button.heightAnchor constraintEqualToConstant:52].active = YES;
+    return button;
+}
+
+- (void)loginButtonDown:(UIButton *)sender { [UIView animateWithDuration:0.08 animations:^{ sender.alpha = 0.7; }]; }
+- (void)loginButtonUp:(UIButton *)sender { [UIView animateWithDuration:0.18 animations:^{ sender.alpha = 1.0; }]; }
+
+- (UIButton *)makeGuestButton {
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+    button.translatesAutoresizingMaskIntoConstraints = NO;
+    [button setTitle:@"Browse downloaded apps" forState:UIControlStateNormal];
+    [button setTitleColor:[IPARDialog accentColor] forState:UIControlStateNormal];
+    button.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
+    [button addTarget:self action:@selector(enterGuestMode) forControlEvents:UIControlEventTouchUpInside];
+    [button addTarget:self action:@selector(loginButtonDown:) forControlEvents:UIControlEventTouchDown];
+    [button addTarget:self action:@selector(loginButtonUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside | UIControlEventTouchCancel];
+    [button.heightAnchor constraintEqualToConstant:44].active = YES;
+    return button;
+}
+
+- (void)enterGuestMode {
+    [IPARUtils setGuestMode:YES];
+    [self setTabNavigation];
+}
+
+- (UIView *)makeFooter {
+    UIStackView *footer = [[UIStackView alloc] init];
+    footer.axis = UILayoutConstraintAxisVertical;
+    footer.alignment = UIStackViewAlignmentCenter;
+    footer.spacing = 12.0;
+
+    UIStackView *links = [[UIStackView alloc] init];
+    links.axis = UILayoutConstraintAxisHorizontal;
+    links.alignment = UIStackViewAlignmentCenter;
+    links.spacing = 22.0;
+    [links addArrangedSubview:[self linkButtonWithImageNamed:kTwitterIcon title:@"Need help?" action:@selector(openTwitter)]];
+    [links addArrangedSubview:[self linkButtonWithImageNamed:kGithubIcon title:@"Source code" action:@selector(openGithubLink)]];
+
+    UILabel *createdBy = [[UILabel alloc] init];
+    createdBy.text = @"Created by 0xkuj";
+    createdBy.font = [UIFont systemFontOfSize:13 weight:UIFontWeightMedium];
+    createdBy.textColor = [UIColor secondaryLabelColor];
+
+    UILabel *version = [[UILabel alloc] init];
+    version.text = kIPARangerVersion;
+    version.font = [UIFont systemFontOfSize:12 weight:UIFontWeightRegular];
+    version.textColor = [UIColor tertiaryLabelColor];
+    version.textAlignment = NSTextAlignmentCenter;
+    version.numberOfLines = 0;
+
+    [footer addArrangedSubview:links];
+    [footer addArrangedSubview:createdBy];
+    [footer addArrangedSubview:version];
+    [footer setCustomSpacing:18 afterView:links];
+    return footer;
+}
+
+- (UIButton *)linkButtonWithImageNamed:(NSString *)imageName title:(NSString *)title action:(SEL)action {
+    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+
+    UIImageView *icon = [[UIImageView alloc] initWithImage:[UIImage imageNamed:imageName]];
+    icon.contentMode = UIViewContentModeScaleAspectFit;
+    icon.translatesAutoresizingMaskIntoConstraints = NO;
+    [icon.widthAnchor constraintEqualToConstant:18].active = YES;
+    [icon.heightAnchor constraintEqualToConstant:18].active = YES;
+
+    UILabel *label = [[UILabel alloc] init];
+    label.text = title;
+    label.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+    label.textColor = [IPARDialog accentColor];
+
+    UIStackView *hstack = [[UIStackView alloc] initWithArrangedSubviews:@[icon, label]];
+    hstack.axis = UILayoutConstraintAxisHorizontal;
+    hstack.alignment = UIStackViewAlignmentCenter;
+    hstack.spacing = 7.0;
+    hstack.translatesAutoresizingMaskIntoConstraints = NO;
+    hstack.userInteractionEnabled = NO;
+    [button addSubview:hstack];
+
+    [NSLayoutConstraint activateConstraints:@[
+        [hstack.topAnchor constraintEqualToAnchor:button.topAnchor constant:6],
+        [hstack.bottomAnchor constraintEqualToAnchor:button.bottomAnchor constant:-6],
+        [hstack.leadingAnchor constraintEqualToAnchor:button.leadingAnchor],
+        [hstack.trailingAnchor constraintEqualToAnchor:button.trailingAnchor],
+    ]];
+    [button addTarget:self action:action forControlEvents:UIControlEventTouchUpInside];
+    return button;
+}
+
+- (void)openTwitter { [IPARUtils openTW]; }
+- (void)openGithubLink { [IPARUtils openGithub]; }
+
+#pragma mark - Password visibility
 
 - (void)togglePasswordVisibility:(UIButton *)sender {
     self.passwordTextField.secureTextEntry = !self.passwordTextField.secureTextEntry;
@@ -198,70 +323,34 @@
     [self.eyeButton setImage:[UIImage systemImageNamed:imageName] forState:UIControlStateNormal];
 }
 
-- (UIButton *)setLoginButtonPrefsWithFrame:(CGRect)frame title:(NSString *)title {
-    UIButton* loginButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    [loginButton setTitle:title forState:UIControlStateNormal];
-    [loginButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-    loginButton.backgroundColor = [UIColor colorWithRed:0.0 green:0.1 blue:0.2 alpha:1.0];
-    loginButton.layer.cornerRadius = 10;
-    loginButton.layer.shadowColor = [UIColor blackColor].CGColor;
-    loginButton.layer.shadowOffset = CGSizeMake(0.0, 2.0);
-    loginButton.layer.shadowOpacity = 1;
-    loginButton.layer.shadowRadius = 20;
-    loginButton.frame = frame;
-    [loginButton addTarget:self action:@selector(handleLoginEmailPass) forControlEvents:UIControlEventTouchUpInside];
-    return loginButton;
-}
+#pragma mark - Keyboard
 
-- (UITextField *)setTextFieldsViewWithFrame:(CGRect)frame title:(NSString *)title {
-    NSDictionary *attributes = @{NSForegroundColorAttributeName : [UIColor colorWithRed:115/255.0 green:115/255.0 blue:115/255.0 alpha:1.0]};
-    UITextField *textField = [[UITextField alloc] initWithFrame:frame];
-    textField.attributedPlaceholder = [[NSAttributedString alloc] initWithString:title attributes:attributes];
-    textField.layer.shadowColor = [UIColor blackColor].CGColor;
-    textField.layer.shadowOffset = CGSizeMake(0.0, 2.0);
-    textField.layer.shadowOpacity = 1;
-    textField.layer.shadowRadius = 20;
-    textField.layer.cornerRadius = 10;
-    textField.borderStyle = UITextBorderStyleRoundedRect;
-    textField.autocorrectionType = UITextAutocorrectionTypeNo;
-    textField.font = [UIFont systemFontOfSize:14];
-    textField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    textField.keyboardType = UIKeyboardTypeEmailAddress;
-    textField.returnKeyType = UIReturnKeyDone;
-    textField.clearButtonMode = UITextFieldViewModeWhileEditing;
-    textField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
-    textField.backgroundColor = [UIColor colorWithRed:0.83 green:0.83 blue:0.83 alpha:1.0];
-    textField.textColor = [UIColor blackColor];
-
-    return textField;
-}
-
-// Implement the dismissKeyboard method
 - (void)dismissKeyboard {
     [self.view endEditing:YES];
 }
 
-- (void)keyboardWillShow:(NSNotification *)notification
-{
-    NSDictionary *userInfo = [notification userInfo];
-    CGRect keyboardFrame = [[userInfo objectForKey:UIKeyboardFrameBeginUserInfoKey] CGRectValue];
-    CGFloat keyboardHeight = keyboardFrame.size.height;
-    CGRect newFrame = self.view.frame;
+- (void)keyboardWillShow:(NSNotification *)notification {
+    CGRect endFrame = [notification.userInfo[UIKeyboardFrameEndUserInfoKey] CGRectValue];
+    CGRect kbInView = [self.view convertRect:endFrame fromView:nil];
+    CGFloat overlap = CGRectGetMaxY(self.scrollView.frame) - CGRectGetMinY(kbInView);
+    if (overlap < 0) { overlap = 0; }
 
-    newFrame.origin.y = -20;
-    [UIView animateWithDuration:0.3 animations:^{
-        self.view.frame = newFrame;
-    }];
+    UIEdgeInsets insets = self.scrollView.contentInset;
+    insets.bottom = overlap;
+    self.scrollView.contentInset = insets;
+    UIEdgeInsets indicator = self.scrollView.verticalScrollIndicatorInsets;
+    indicator.bottom = overlap;
+    self.scrollView.verticalScrollIndicatorInsets = indicator;
 }
 
-- (void)keyboardWillHide:(NSNotification *)notification
-{
-    CGRect newFrame = self.view.frame;
-    newFrame.origin.y = 0;
+- (void)keyboardWillHide:(NSNotification *)notification {
+    self.scrollView.contentInset = UIEdgeInsetsZero;
+    self.scrollView.verticalScrollIndicatorInsets = UIEdgeInsetsZero;
+}
 
-    [UIView animateWithDuration:0.3 animations:^{
-        self.view.frame = newFrame;
-    }];
+- (void)textFieldDidBeginEditing:(UITextField *)textField {
+    CGRect rect = [self.scrollView convertRect:textField.bounds fromView:textField];
+    [self.scrollView scrollRectToVisible:CGRectInset(rect, 0, -80) animated:YES];
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
@@ -273,33 +362,82 @@
     return NO;
 }
 
-- (void)handleLoginEmailPass {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Logging in..."
-                                                                message:@"\n\n\n"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
+#pragma mark - Welcome
 
-    [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 65.5)]];
-    [self presentViewController:alert animated:YES completion:nil];
-    
+- (void)showFirstTimeAlert {
+    if (self.welcomeMessageTimer != nil) {
+        [self.welcomeMessageTimer invalidate];
+    }
+    __weak typeof(self) weakSelf = self;
+
+    IPARDialog *dialog = [IPARDialog dialogWithTitle:@"Welcome to IPA Ranger!"
+                                             message:@"This is an open source project I worked hard to maintain. Your Apple ID and password are sent directly to Apple’s servers and are never saved on your device.\n\nIf you have any concerns, check out the source code below (and maybe drop a star ;) ).\n\nEnjoy!"];
+
+    [dialog addButtonWithTitle:@"Check out the code" style:IPARDialogButtonStyleCancel handler:^{
+        [IPARUtils openGithub];
+        [weakSelf showFirstTimeAlert];
+    }];
+
+    UIButton *okButton = [dialog addButtonWithTitle:@"OK (10…)" style:IPARDialogButtonStylePrimary handler:^{
+        [IPARUtils saveKeyToFile:kFirstLaunchKey withValue:kFirstLaunchDoneKey];
+    }];
+    okButton.enabled = NO;
+    okButton.alpha = 0.45;
+
+    [dialog presentOn:self];
+
+    self.welcomeMessageTimer = [NSTimer scheduledTimerWithTimeInterval:1.0 repeats:YES block:^(NSTimer * _Nonnull timer) {
+        weakSelf.welcomeMessageCounter--;
+        if (weakSelf.welcomeMessageCounter > 0) {
+            [okButton setTitle:[NSString stringWithFormat:@"OK (%d…)", weakSelf.welcomeMessageCounter] forState:UIControlStateNormal];
+        } else {
+            [okButton setTitle:@"OK" forState:UIControlStateNormal];
+            okButton.enabled = YES;
+            okButton.alpha = 1.0;
+            [weakSelf.welcomeMessageTimer invalidate];
+        }
+    }];
+}
+
+#pragma mark - Login
+
+- (void)handleLoginEmailPass {
+    [IPARUtils presentLoadingDialogWithMessage:@"Logging in…\nThe first login may take a minute." on:self];
+
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
         self.lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
-        if ([self.lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError]) {
-           [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:self.lastCommandResult[kJsonLevelError] hasTextfield:NO withTextfieldBlock:nil
-                            alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
-            }]; 
-        } else if ([self.lastCommandResult[kJsonResponseContent] containsString:@"2FA"]) {
+
+        NSString *message = self.lastCommandResult[kJsonResponseContent]; // "message"
+        NSString *errorText = self.lastCommandResult[kJsonLevelError];    // "error"
+        // ipatool signals "2FA required" in the "message" key (level info); check
+        // the "error" key too so a future/alternate format still routes to 2FA.
+        BOOL requires2FA = ([message containsString:@"2FA"] || [errorText containsString:@"2FA"]);
+
+        if (requires2FA) {
             [self dismissViewControllerAnimated:YES completion:^{
                 [self handle2FADialog];
             }];
+        } else if ([self.lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError]) {
+           [self dismissViewControllerAnimated:YES completion:^{
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:errorText hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }];
         } else if ([self.lastCommandResult[kJsonKeySuccess] boolValue] == YES) {
             [self userAuthenticated];
+        } else {
+            // Unexpected result: surface it instead of leaving the spinner running forever.
+            [self dismissViewControllerAnimated:YES completion:^{
+                NSString *fallback = errorText.length ? errorText : (message.length ? message : @"Login failed: unexpected response");
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:fallback hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }];
         }
     });
 }
 
 - (void)userAuthenticated {
+    [IPARUtils setGuestMode:NO];
     [self authToFile:self.lastCommandResult[@"name"]];
     [self setTabNavigation];
 }
@@ -319,12 +457,7 @@
 }
 
 - (void)handle2FALogic:(NSString *)twoFARes {
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Logging in with 2FA..."
-                                                                message:@"\n\n\n"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-
-    [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 65.5)]];
-    [self presentViewController:alert animated:YES completion:nil];
+    [IPARUtils presentLoadingDialogWithMessage:@"Verifying your 2FA code…" on:self];
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword2FA, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text, twoFARes];
@@ -333,9 +466,18 @@
            [self dismissViewControllerAnimated:YES completion:^{
                 [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:self.lastCommandResult[kJsonLevelError] hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
-            }]; 
+            }];
         } else if ([self.lastCommandResult[kJsonKeySuccess] boolValue] == YES) {
             [self userAuthenticated];
+        } else {
+            // Unexpected result: surface it instead of leaving the spinner running forever.
+            [self dismissViewControllerAnimated:YES completion:^{
+                NSString *errorText = self.lastCommandResult[kJsonLevelError];
+                NSString *message = self.lastCommandResult[kJsonResponseContent];
+                NSString *fallback = errorText.length ? errorText : (message.length ? message : @"2FA login failed: unexpected response");
+                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:fallback hasTextfield:NO withTextfieldBlock:nil
+                            alertConfirmationBlock:nil withConfirmText:@"Try Again" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            }];
         }
     });
 }
@@ -346,13 +488,13 @@
 
 - (void)setTabNavigation {
     IPARSearchViewController *searchVC = [[IPARSearchViewController alloc] init];
-    UINavigationController *searchNC = [[UINavigationController alloc] initWithRootViewController:searchVC];    
+    UINavigationController *searchNC = [[UINavigationController alloc] initWithRootViewController:searchVC];
 
     IPARDownloadViewController *downloadVC = [[IPARDownloadViewController alloc] init];
-    UINavigationController *downloadNC = [[UINavigationController alloc] initWithRootViewController:downloadVC];    
+    UINavigationController *downloadNC = [[UINavigationController alloc] initWithRootViewController:downloadVC];
 
     IPARAccountAndCredits *accountVC = [[IPARAccountAndCredits alloc] init];
-    UINavigationController *accountNC = [[UINavigationController alloc] initWithRootViewController:accountVC]; 
+    UINavigationController *accountNC = [[UINavigationController alloc] initWithRootViewController:accountVC];
 
     UITabBarController *tabBarController = [[UITabBarController alloc] init];
     tabBarController.viewControllers = @[searchNC, downloadNC, accountNC];
@@ -360,4 +502,5 @@
     UIWindow *window = UIApplication.sharedApplication.delegate.window;
     window.rootViewController = tabBarController;
 }
+
 @end

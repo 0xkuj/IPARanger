@@ -19,12 +19,37 @@ fi
 
 echo "Settings up permissions to the main files directory..."
 chown -R 501:501 $FILES_DIR
-chmod +x $BINARY_DIR
+chmod +x "$BINARY_DIR/ipatool"
 
 if [ $? -ne 0 ]; then
   echo "Settings up permissions FAILED with exit status $?. this may cause unexpected behavior"
 else
   echo "Settings up permissions is done!"
-  echo "You are all set. Enjoy!"
-  echo "Created with <3 by 0xkuj"
 fi
+
+# NOTE: ipatool trust-caching is intentionally DISABLED for now (whole block below
+# commented out). ipatool and its bundled libunicorn.2.dylib live under the app
+# bundle path (/var/jb/Applications/IPARanger.app/ipatool/...), which the jailbreak
+# lets ad-hoc binaries launch from without a trustcache entry — verified on two
+# devices (192.168.1.106 fully permissive; 192.168.1.118 kills ad-hoc binaries from
+# /var/jb/tmp but runs them fine from the app bundle path). If some device SIGKILLs
+# ipatool at launch even from the app path, re-enable this block (uncomment it): it
+# computes the shipped binary's cdhash via ldid and registers it with jbctl, and
+# stays correct across rebuilds.
+#
+# IPATOOL_BIN="$BINARY_DIR/ipatool"
+# if [ -d "$CHECK_ROOTLESS" ] && command -v jbctl >/dev/null 2>&1 && command -v ldid >/dev/null 2>&1; then
+#   CDHASH=$(ldid -h "$IPATOOL_BIN" 2>/dev/null | grep '^CDHash=' | head -1 | cut -d= -f2)
+#   if [ -n "$CDHASH" ]; then
+#     if jbctl trustcache add "$CDHASH" >/dev/null 2>&1; then
+#       echo "Trust-cached ipatool ($CDHASH)."
+#     else
+#       echo "WARNING: failed to trust-cache ipatool ($CDHASH); download/login may not work until it is trust-cached."
+#     fi
+#   else
+#     echo "WARNING: could not read ipatool cdhash; download/login may not work until it is trust-cached."
+#   fi
+# fi
+
+echo "You are all set. Enjoy!"
+echo "Created with <3 by 0xkuj"

@@ -94,6 +94,10 @@
 }
 
 - (void)searchButtonTapped:(id)sender {
+    if ([IPARUtils isGuestMode]) {
+        [self promptGuestSignIn];
+        return;
+    }
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
         if ([textField.text isEqualToString:self.latestSearchTerm] == NO) {
             self.latestSearchTerm = textField.text;
@@ -115,20 +119,23 @@
     [IPARUtils presentDialogWithTitle:kIPARangerSearchPromptHeadline message:@"Enter App Name" hasTextfield:YES withTextfieldBlock:textFieldBlock alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Search" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 }
 
-- (void)runSearchCommand {
-    UIAlertController *alert;
-    if (self.limitSearch > APPS_SEARCH_INITIAL_LIMIT) {
-        alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"Fetching more results for '%@' from the Appstore", self.latestSearchTerm]
-                                                                message:@"\n\n\n\n"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    } else {
-        alert = [UIAlertController alertControllerWithTitle:[NSString stringWithFormat:@"Searching for '%@' in the Appstore", self.latestSearchTerm]
-                                                                message:@"\n\n\n\n"
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    }
+- (void)promptGuestSignIn {
+    [IPARUtils presentDialogWithTitle:@"Sign in required"
+                              message:@"Searching the App Store needs an Apple ID. Sign in to search and download apps."
+                         hasTextfield:NO
+                   withTextfieldBlock:nil
+               alertConfirmationBlock:^(UITextField *textField) { [IPARUtils switchToLoginScreen]; }
+                      withConfirmText:@"Sign In"
+                     alertCancelBlock:nil
+                       withCancelText:@"Not now"
+                            presentOn:self];
+}
 
-    [alert.view addSubview:[IPARUtils createActivitiyIndicatorWithPoint:CGPointMake(130.5, 110)]];
-    [self presentViewController:alert animated:YES completion:nil];
+- (void)runSearchCommand {
+    NSString *loadingMessage = (self.limitSearch > APPS_SEARCH_INITIAL_LIMIT)
+        ? [NSString stringWithFormat:@"Fetching more results for “%@”…", self.latestSearchTerm]
+        : [NSString stringWithFormat:@"Searching the App Store for “%@”…", self.latestSearchTerm];
+    [IPARUtils presentLoadingDialogWithMessage:loadingMessage on:self];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kSearchCommandPathTermLimitCountry, kIpatoolScriptPath, self.latestSearchTerm, self.limitSearch];
@@ -182,7 +189,11 @@
         //adding one for show more button
         return self.searchResults.count+1;
     }
-    self.noDataLabel.text = @"Nothing to show here.\nStart by clicking the search icon!";
+    if ([IPARUtils isGuestMode]) {
+        self.noDataLabel.text = @"Sign in to search the App Store.\nTap the search icon to sign in.";
+    } else {
+        self.noDataLabel.text = @"Nothing to show here.\nStart by clicking the search icon!";
+    }
     return 0;
 }
 
@@ -204,7 +215,6 @@
     selectionView.backgroundColor = UIColor.clearColor;
     [[UITableViewCell appearance] setSelectedBackgroundView:selectionView];
     cell.backgroundColor = UIColor.clearColor;
-    //still crashing.. need to figure out why!
     cell.appName.text = self.searchResults[indexPath.row][kAppnameIndex];
     cell.appBundle.text = self.searchResults[indexPath.row][kAppBundleIndex];
     cell.appVersion.text = self.searchResults[indexPath.row][kAppVersionIndex];
