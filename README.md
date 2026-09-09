@@ -11,7 +11,7 @@ This app is meant for jailbroken devices, but may support non-jailbroken devices
 # Usage 
 This app consists mainly 4 screens.
 Login - Where you will input your Apple ID and Apple ID password:
-<img src="https://user-images.githubusercontent.com/56236821/228067107-e19bb1e5-3a7d-4ef9-bff4-a552bfbedf7d.png" width="400" height="850">
+<img src="https://github.com/user-attachments/assets/7dd5f31b-45c0-4561-b6e7-d6a8421833c6" width="400" height="850">
 
 Search Screen - Where you will define the country you want to search apps in the Appstore
 <img src="https://user-images.githubusercontent.com/56236821/228067086-f709655d-7b7c-456a-9596-01dba19c39e5.png" width="400" height="850">
@@ -23,7 +23,7 @@ Download Screen - Where you will handle - delete/rename/share/install your donwl
 
 Account Screen - Where you can see details such as last login date, your name and your email of the account that is connected to the app
 
-<img src="https://user-images.githubusercontent.com/56236821/228067467-e3bd91fc-9ac9-47d0-b82c-afefeb2fc571.jpg" width="400" height="850">
+<img src="https://github.com/user-attachments/assets/2508af5e-a399-436c-93b4-30ace3dc9833" width="400" height="850">
 
 # Support
   * Jailbroken devices running iOS 13.4 - iOS 16 (?) (without Xina15 jailbreak included)
