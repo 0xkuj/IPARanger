@@ -1,9 +1,11 @@
-export TARGET = iphone:clang:14.5:14.5
+export TARGET = iphone:clang:14.5:14.0
 INSTALL_TARGET_PROCESSES = IPARanger
-ARCHS = arm64 arm64e
 
 ifeq ($(THEOS_PACKAGE_SCHEME),rootless)
+    ARCHS = arm64 arm64e
     CFLAGS += -DTHEOS_PACKAGE_SCHEME_rootless
+else
+    ARCHS = arm64
 endif
 
 include $(THEOS)/makefiles/common.mk
