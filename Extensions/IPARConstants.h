@@ -18,7 +18,7 @@ static const int APPS_SEARCH_INITIAL_LIMIT = 12;
     static NSString *const kIPARangerAppsCacheDirPath = @"/var/jb/Library/IPARanger/cacheDir/AppCache.plist";
     static NSString *const kIpatoolScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/ipatool";
     static NSString *const kAppinstScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/appinst";
-    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.5.2 (rootless)";
+    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.6.0 (rootless)";
 #else
     /** ROOTFUL CONSTANTS **/
     // default
@@ -38,7 +38,7 @@ static const int APPS_SEARCH_INITIAL_LIMIT = 12;
     static NSString *const kIPARangerAppsCacheDirPath = @"/var/mobile/Documents/IPARanger/cacheDir/AppCache.plist";
     static NSString *const kIpatoolScriptPath = @"/Applications/IPARanger.app/ipatool/ipatool";
     static NSString *const kAppinstScriptPath = @"/Applications/IPARanger.app/ipatool/appinst";
-    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.5.2 (rootful)";
+    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.6.0 (rootful)";
 #endif
 
 static NSString *const kIPARCountryChangedNotification = @"com.0xkuj.iparanger.countryChanged";
@@ -61,7 +61,15 @@ static NSString *const kSearchCommandPathTermLimitCountry = @"%@ search '%@' --l
 static NSString *const kLoginCommandPathAccountPassword = @"%@ auth login -e '%@' -p '%@' --keychain-passphrase IPARanger --non-interactive --format json";
 static NSString *const kLoginCommandPathAccountPassword2FA = @"%@ auth login -e '%@' -p '%@' --auth-code '%@' --keychain-passphrase IPARanger --non-interactive --format json";
 static NSString *const kDownloadCommandBundleOutputpathCountry = @"%@ download --bundle-identifier %@ -o %@ --purchase --keychain-passphrase IPARanger --format json >> %@";
+static NSString *const kDownloadCommandBundleVersionOutputpathCountry = @"%@ download --bundle-identifier %@ --external-version-id %@ -o %@ --purchase --keychain-passphrase IPARanger --format json >> %@";
 static NSString *const kLogoutCommand = @"%@ auth revoke --keychain-passphrase IPARanger --format json";
+
+// Version history: iTunes lookup maps a bundle id -> numeric app id (trackId);
+// the bilin endpoint maps that app id -> full version history (bundle_version,
+// external_identifier, created_at). The external_identifier is what ipatool's
+// --external-version-id expects.
+static NSString *const kITunesLookupByBundleURL = @"https://itunes.apple.com/lookup?bundleId=%@&limit=1&media=software";
+static NSString *const kAppVersionHistoryURL = @"https://apis.bilin.eu.org/history/%@";
 static NSString *const kPredicateIPAApps = @"pathExtension == 'ipa'";
 static NSString *const kFilenameIndex = @"filename";
 static NSString *const kLoginTitle = @"Login";

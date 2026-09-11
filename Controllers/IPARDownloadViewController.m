@@ -6,6 +6,7 @@
 #import "../Extensions/IPARConstants.h"
 #import "../Cells/IPARAppCell.h"
 #import "../Views/IPARDialog.h"
+#import "IPARVersionPickerViewController.h"
 
 #pragma clang diagnostic ignored "-Wimplicit-function-declaration"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -412,27 +413,13 @@
 
 - (void)downloadButtonTapped:(id)sender {
     AlertActionBlockWithTextField alertBlockConfirm = ^(UITextField *textField) {
-        self.lastBundleDownload = textField.text;
-        if (self.lastBundleDownload == nil || [self.lastBundleDownload stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length == 0) {
+        NSString *bundleID = [textField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+        if (bundleID.length == 0) {
             [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:@"Bundle ID cannot be empty" hasTextfield:NO withTextfieldBlock:nil
                             alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+            return;
         }
-        [self showDownloadDialog];
-        self.currentPrecentageDownload = 0;
-        [self.downloadDialog setProgress:0.0f];
-        NSString *commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, self.lastBundleDownload, kIPARangerDocumentsPath, kDownloadProgressFileOutput];
-        NSDictionary *lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
-        // this means we had errors trying to run download..
-        if ([lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError]) {
-           [self dismissViewControllerAnimated:YES completion:^{
-                [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:lastCommandResult[kJsonLevelError] hasTextfield:NO withTextfieldBlock:nil
-                            alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
-            }]; 
-        } else {
-            // download should start, remove the progress file if needed
-            [[NSFileManager defaultManager] removeItemAtPath:kDownloadProgressFileOutput error:nil];
-            [self startMonitoringDownloadProgress];
-        }
+        [self fetchVersionsForBundleID:bundleID];
     };
 
     AlertActionBlockWithTextField alertBlockTextfield = ^(UITextField *textField) {
@@ -440,8 +427,124 @@
     };
 
     [IPARUtils presentDialogWithTitle:kIPARangerDownloadPromptHeadline message:@"Enter App Bundle ID" hasTextfield:YES withTextfieldBlock:alertBlockTextfield
-                    alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Download" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
+                    alertConfirmationBlock:alertBlockConfirm withConfirmText:@"Continue" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
 
+}
+
+#pragma mark - Version selection
+
+// Resolves the bundle id to an App Store app, fetches its version history, and
+// lets the user pick a version to download (with a fallback to Latest).
+- (void)fetchVersionsForBundleID:(NSString *)bundleID {
+    [IPARUtils presentLoadingDialogWithMessage:@"Fetching available versions…" on:self];
+
+    NSString *lookupURLString = [NSString stringWithFormat:kITunesLookupByBundleURL, bundleID];
+    NSURL *lookupURL = [NSURL URLWithString:lookupURLString];
+    if (!lookupURL) {
+        [self offerLatestVersionForBundleID:bundleID message:@"Invalid bundle identifier."];
+        return;
+    }
+
+    NSURLSessionDataTask *lookupTask = [[NSURLSession sharedSession] dataTaskWithURL:lookupURL completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (error || data == nil) {
+            [self offerLatestVersionForBundleID:bundleID message:(error.localizedDescription ?: @"Could not reach the App Store.")];
+            return;
+        }
+
+        NSDictionary *lookupResult = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        NSArray *results = lookupResult[@"results"];
+        if (![results isKindOfClass:[NSArray class]] || results.count == 0) {
+            [self dismissVersionFetchWithError:@"No App Store app was found for this bundle ID."];
+            return;
+        }
+
+        NSNumber *appID = results[0][@"trackId"];
+        NSString *appName = [NSString stringWithFormat:@"%@", results[0][@"trackName"] ?: bundleID];
+        if (appID == nil) {
+            [self offerLatestVersionForBundleID:bundleID message:@"Could not resolve the app's ID."];
+            return;
+        }
+
+        NSString *historyURLString = [NSString stringWithFormat:kAppVersionHistoryURL, appID];
+        NSURL *historyURL = [NSURL URLWithString:historyURLString];
+        NSURLSessionDataTask *historyTask = [[NSURLSession sharedSession] dataTaskWithURL:historyURL completionHandler:^(NSData *historyData, NSURLResponse *historyResponse, NSError *historyError) {
+            if (historyError || historyData == nil) {
+                [self offerLatestVersionForBundleID:bundleID message:(historyError.localizedDescription ?: @"Version history is unavailable.")];
+                return;
+            }
+
+            NSDictionary *historyResult = [NSJSONSerialization JSONObjectWithData:historyData options:0 error:nil];
+            NSArray *versions = historyResult[@"data"];
+            if (![versions isKindOfClass:[NSArray class]] || versions.count == 0) {
+                [self offerLatestVersionForBundleID:bundleID message:@"No version history was found for this app."];
+                return;
+            }
+
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self dismissViewControllerAnimated:YES completion:^{
+                    IPARVersionPickerViewController *picker = [[IPARVersionPickerViewController alloc] initWithAppName:appName versions:versions completion:^(NSString *externalVersionID) {
+                        [self startDownloadForBundleID:bundleID externalVersionID:externalVersionID];
+                    }];
+                    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:picker];
+                    nav.modalPresentationStyle = UIModalPresentationFormSheet;
+                    [self presentViewController:nav animated:YES completion:nil];
+                }];
+            });
+        }];
+        [historyTask resume];
+    }];
+    [lookupTask resume];
+}
+
+// Version history couldn't be loaded — offer to download the latest version anyway.
+- (void)offerLatestVersionForBundleID:(NSString *)bundleID message:(NSString *)message {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self dismissViewControllerAnimated:YES completion:^{
+            NSString *text = [NSString stringWithFormat:@"%@\n\nYou can still download the latest version.", message ?: @"Version history is unavailable."];
+            AlertActionBlockWithTextField confirmBlock = ^(UITextField *textField) {
+                [self startDownloadForBundleID:bundleID externalVersionID:@""];
+            };
+            [IPARUtils presentDialogWithTitle:kIPARangerWarningHeadline message:text hasTextfield:NO withTextfieldBlock:nil
+                        alertConfirmationBlock:confirmBlock withConfirmText:@"Download Latest" alertCancelBlock:nil withCancelText:@"Cancel" presentOn:self];
+        }];
+    });
+}
+
+- (void)dismissVersionFetchWithError:(NSString *)message {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self dismissViewControllerAnimated:YES completion:^{
+            [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:message hasTextfield:NO withTextfieldBlock:nil
+                        alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+        }];
+    });
+}
+
+// externalVersionID empty => latest version.
+- (void)startDownloadForBundleID:(NSString *)bundleID externalVersionID:(NSString *)externalVersionID {
+    self.lastBundleDownload = bundleID;
+    [self showDownloadDialog];
+    self.currentPrecentageDownload = 0;
+    [self.downloadDialog setProgress:0.0f];
+
+    NSString *commandToExecute;
+    if (externalVersionID.length > 0) {
+        commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleVersionOutputpathCountry, kIpatoolScriptPath, bundleID, externalVersionID, kIPARangerDocumentsPath, kDownloadProgressFileOutput];
+    } else {
+        commandToExecute = [NSString stringWithFormat:kDownloadCommandBundleOutputpathCountry, kIpatoolScriptPath, bundleID, kIPARangerDocumentsPath, kDownloadProgressFileOutput];
+    }
+
+    NSDictionary *lastCommandResult = [IPARUtils executeCommandAndGetJSON:kLaunchPathBash arg1:kBashCommandKey arg2:commandToExecute arg3:nil];
+    // this means we had errors trying to run download..
+    if ([lastCommandResult[kJsonLevel] isEqualToString:kJsonLevelError]) {
+       [self dismissViewControllerAnimated:YES completion:^{
+            [IPARUtils presentDialogWithTitle:kIPARangerErrorHeadline message:lastCommandResult[kJsonLevelError] hasTextfield:NO withTextfieldBlock:nil
+                        alertConfirmationBlock:nil withConfirmText:@"OK" alertCancelBlock:nil withCancelText:nil presentOn:self];
+        }];
+    } else {
+        // download should start, remove the progress file if needed
+        [[NSFileManager defaultManager] removeItemAtPath:kDownloadProgressFileOutput error:nil];
+        [self startMonitoringDownloadProgress];
+    }
 }
 
 - (void)startMonitoringDownloadProgress {
