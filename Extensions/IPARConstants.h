@@ -18,7 +18,7 @@ static const int APPS_SEARCH_INITIAL_LIMIT = 12;
     static NSString *const kIPARangerAppsCacheDirPath = @"/var/jb/Library/IPARanger/cacheDir/AppCache.plist";
     static NSString *const kIpatoolScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/ipatool";
     static NSString *const kAppinstScriptPath = @"/var/jb/Applications/IPARanger.app/ipatool/appinst";
-    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.6.0 (rootless)";
+    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.7.0 (rootless)";
 #else
     /** ROOTFUL CONSTANTS **/
     // default
@@ -38,7 +38,7 @@ static const int APPS_SEARCH_INITIAL_LIMIT = 12;
     static NSString *const kIPARangerAppsCacheDirPath = @"/var/mobile/Documents/IPARanger/cacheDir/AppCache.plist";
     static NSString *const kIpatoolScriptPath = @"/Applications/IPARanger.app/ipatool/ipatool";
     static NSString *const kAppinstScriptPath = @"/Applications/IPARanger.app/ipatool/appinst";
-    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.6.0 (rootful)";
+    static NSString *const kIPARangerVersion = @"IPA Ranger version: 2.7.0 (rootful)";
 #endif
 
 static NSString *const kIPARCountryChangedNotification = @"com.0xkuj.iparanger.countryChanged";
@@ -134,5 +134,5 @@ static NSString *const kAccountTitle = @"Account";
 static NSString *const kSearchTitle = @"Search";
 static NSString *const kDownloadTitle = @"Download";
 static NSString *const kLastLoginDateKey = @"lastLoginDate";
-static NSString *const kipaToolVersion = @"ipatool version: 2.5.0 (fork) (iOS)";
+static NSString *const kipaToolVersion = @"ipatool version: 2.6.0 (iOS)";
 static NSString *const kIPARangerLoginSubtitle = @"The first GUI-based app for ipatool\n<made by 0xkuj>";

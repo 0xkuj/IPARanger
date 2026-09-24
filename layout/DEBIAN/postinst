@@ -28,8 +28,8 @@ else
 fi
 
 # NOTE: ipatool trust-caching is intentionally DISABLED for now (whole block below
-# commented out). ipatool and its bundled libunicorn.2.dylib live under the app
-# bundle path (/var/jb/Applications/IPARanger.app/ipatool/...), which the jailbreak
+# commented out). ipatool lives under the app bundle path
+# (/var/jb/Applications/IPARanger.app/ipatool/...), which the jailbreak
 # lets ad-hoc binaries launch from without a trustcache entry — verified on two
 # devices (192.168.1.106 fully permissive; 192.168.1.118 kills ad-hoc binaries from
 # /var/jb/tmp but runs them fine from the app bundle path). If some device SIGKILLs
