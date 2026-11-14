@@ -432,6 +432,22 @@ static BOOL sGuestMode = NO;
     [dialog presentOn:viewController];
 }
 
+// ipatool (2.8+) downloads ~75 MB of Apple components into
+// $HOME/Library/Caches/ipatool/sap/apple-assets-* the first time it talks to the
+// App Store, which can take several minutes. It resolves that path from the HOME
+// it inherits from us, so check the same location to know whether to warn.
++ (BOOL)ipatoolNeedsFirstRunSetup {
+    const char *homeEnv = getenv("HOME");
+    NSString *home = homeEnv ? [NSString stringWithUTF8String:homeEnv] : NSHomeDirectory();
+    NSString *sapDir = [home stringByAppendingPathComponent:@"Library/Caches/ipatool/sap"];
+    for (NSString *entry in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:sapDir error:nil]) {
+        if ([entry hasPrefix:@"apple-assets-macos"]) {
+            return NO;
+        }
+    }
+    return YES;
+}
+
 + (IPARDialog *)presentLoadingDialogWithMessage:(NSString *)message on:(UIViewController *)viewController {
     IPARDialog *dialog = [IPARDialog dialogWithTitle:nil message:message];
     [dialog showSpinner];

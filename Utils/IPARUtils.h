@@ -49,6 +49,8 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
                     presentOn:(id)viewController;
 + (UIActivityIndicatorView *)createActivitiyIndicatorWithPoint:(CGPoint)point;
 + (IPARDialog *)presentLoadingDialogWithMessage:(NSString *)message on:(UIViewController *)viewController;
+// YES until ipatool has cached the Apple components it downloads on first use.
++ (BOOL)ipatoolNeedsFirstRunSetup;
 + (void)cancelScript;
 + (UIButton *)createButtonWithImageName:(NSString *)imageName title:(NSString *)title fontSize:(CGFloat)fontSize selectorName:(NSString *)selectorName frame:(CGRect)frame;
 + (unsigned long long)calculateFolderSize:(NSString *)folderPath;

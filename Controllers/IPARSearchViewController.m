@@ -135,6 +135,9 @@
     NSString *loadingMessage = (self.limitSearch > APPS_SEARCH_INITIAL_LIMIT)
         ? [NSString stringWithFormat:@"Fetching more results for “%@”…", self.latestSearchTerm]
         : [NSString stringWithFormat:@"Searching the App Store for “%@”…", self.latestSearchTerm];
+    if ([IPARUtils ipatoolNeedsFirstRunSetup]) {
+        loadingMessage = [loadingMessage stringByAppendingString:@"\nFirst-time setup: downloading Apple components (~75 MB). This can take 5 minutes or more — keep the app open."];
+    }
     [IPARUtils presentLoadingDialogWithMessage:loadingMessage on:self];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{

@@ -402,7 +402,10 @@
 #pragma mark - Login
 
 - (void)handleLoginEmailPass {
-    [IPARUtils presentLoadingDialogWithMessage:@"Logging in…\nThe first login may take a minute." on:self];
+    NSString *loadingMessage = [IPARUtils ipatoolNeedsFirstRunSetup]
+        ? @"Logging in…\nFirst-time setup: downloading Apple components (~75 MB). This can take 5 minutes or more — keep the app open."
+        : @"Logging in…";
+    [IPARUtils presentLoadingDialogWithMessage:loadingMessage on:self];
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         NSString *commandToExecute = [NSString stringWithFormat:kLoginCommandPathAccountPassword, kIpatoolScriptPath, self.emailTextField.text, self.passwordTextField.text];
