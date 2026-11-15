@@ -334,35 +334,107 @@ static BOOL sGuestMode = NO;
     window.rootViewController = navController;
 }
 
-+ (void)getAppIconFromApple:(NSString *)bundleId completion:(void (^)(UIImage *appIcon))completion {
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND, 0), ^{
-        NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:kItunesImagesForBundleURL, bundleId]];
-        NSData *data = [NSData dataWithContentsOfURL:url];
++ (NSCache<NSString *, UIImage *> *)appIconCache {
+    static NSCache *cache;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        cache = [[NSCache alloc] init];
+    });
+    return cache;
+}
 
-        UIImage *iconImage = nil;
+// Bundle identifier -> artwork URL for one iTunes lookup request.
++ (NSDictionary<NSString *, NSString *> *)artworkURLsFromLookup:(NSString *)query {
+    NSURL *url = [NSURL URLWithString:[@"https://itunes.apple.com/lookup?" stringByAppendingString:query]];
+    NSData *data = [NSData dataWithContentsOfURL:url];
+    if (!data) {
+        return nil;
+    }
+    NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:nil];
+    if (![json isKindOfClass:[NSDictionary class]]) {
+        return nil;
+    }
+    NSMutableDictionary *artwork = [NSMutableDictionary dictionary];
+    for (NSDictionary *appInfo in json[@"results"]) {
+        NSString *bundleId = appInfo[@"bundleId"];
+        NSString *iconUrl = appInfo[kItunesImagesForBundleAnswerField];
+        if (bundleId.length && iconUrl.length) {
+            artwork[bundleId] = iconUrl;
+        }
+    }
+    return artwork;
+}
 
-        if (data) {
-            NSError *jsonError = nil;
-            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&jsonError];
+// Icons for ipatool search results, keyed by bundle identifier. `country` is
+// the storefront the search ran against.
++ (void)getAppIconsFromApple:(NSArray<NSDictionary *> *)apps country:(NSString *)country completion:(void (^)(NSDictionary<NSString *, UIImage *> *icons))completion {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSCache<NSString *, UIImage *> *cache = [self appIconCache];
+        NSMutableDictionary<NSString *, UIImage *> *icons = [NSMutableDictionary dictionary];
+        NSMutableArray<NSString *> *missingBundleIds = [NSMutableArray array];
+        NSMutableArray<NSString *> *missingAppIds = [NSMutableArray array];
 
-            if (!jsonError) {
-                NSArray *results = json[@"results"];
-                if (results.count > 0) {
-                    NSDictionary *appInfo = results[0];
-                    NSString *iconUrlString = appInfo[kItunesImagesForBundleAnswerField];
-                    NSURL *iconUrl = [NSURL URLWithString:iconUrlString];
-                    NSData *iconData = [NSData dataWithContentsOfURL:iconUrl];
-
-                    if (iconData) {
-                        iconImage = [UIImage imageWithData:iconData];
-                    }
-                }
+        for (NSDictionary *app in apps) {
+            NSString *bundleId = app[kAppBundleIndex];
+            if (![bundleId isKindOfClass:[NSString class]] || bundleId.length == 0) {
+                continue;
+            }
+            UIImage *cached = [cache objectForKey:bundleId];
+            if (cached) {
+                icons[bundleId] = cached;
+                continue;
+            }
+            [missingBundleIds addObject:bundleId];
+            if (app[@"id"]) {
+                [missingAppIds addObject:[NSString stringWithFormat:@"%@", app[@"id"]]];
             }
         }
 
+        NSString *countrySuffix = @"";
+        if ([country isKindOfClass:[NSString class]] && country.length == 2) {
+            countrySuffix = [@"&country=" stringByAppendingString:country.lowercaseString];
+        }
+
+        NSMutableDictionary<NSString *, NSString *> *artwork = [NSMutableDictionary dictionary];
+        if (missingAppIds.count > 0) {
+            NSString *query = [[@"id=" stringByAppendingString:[missingAppIds componentsJoinedByString:@","]] stringByAppendingString:countrySuffix];
+            NSDictionary *batch = [self artworkURLsFromLookup:query];
+            if (batch == nil) {
+                // Retry once.
+                [NSThread sleepForTimeInterval:1.0];
+                batch = [self artworkURLsFromLookup:query];
+            }
+            [artwork addEntriesFromDictionary:batch ?: @{}];
+        }
+
+        dispatch_group_t group = dispatch_group_create();
+        dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+        for (NSString *bundleId in missingBundleIds) {
+            NSString *knownIconUrl = artwork[bundleId];
+            dispatch_group_async(group, queue, ^{
+                NSString *iconUrl = knownIconUrl;
+                if (iconUrl == nil) {
+                    NSString *escaped = [bundleId stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]];
+                    iconUrl = [self artworkURLsFromLookup:[[@"bundleId=" stringByAppendingString:escaped ?: @""] stringByAppendingString:countrySuffix]][bundleId];
+                }
+                if (iconUrl == nil) {
+                    return;
+                }
+                NSData *iconData = [NSData dataWithContentsOfURL:[NSURL URLWithString:iconUrl]];
+                UIImage *icon = iconData ? [UIImage imageWithData:iconData] : nil;
+                if (icon) {
+                    [cache setObject:icon forKey:bundleId];
+                    @synchronized (icons) {
+                        icons[bundleId] = icon;
+                    }
+                }
+            });
+        }
+        dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+
         dispatch_async(dispatch_get_main_queue(), ^{
             if (completion) {
-                completion(iconImage);
+                completion(icons);
             }
         });
     });
@@ -432,11 +504,23 @@ static BOOL sGuestMode = NO;
     [dialog presentOn:viewController];
 }
 
-// ipatool (2.8+) downloads ~75 MB of Apple components into
-// $HOME/Library/Caches/ipatool/sap/apple-assets-* the first time it talks to the
-// App Store, which can take several minutes. It resolves that path from the HOME
-// it inherits from us, so check the same location to know whether to warn.
+// ipatool downloads Apple components on first use. It runs through the shell
+// we spawn, whose HOME can differ from ours, so ask that shell for the cache.
 + (BOOL)ipatoolNeedsFirstRunSetup {
+    // Builtins only: the spawned shell has no usable PATH.
+    NSString *probe = @"for d in \"$HOME\"/Library/Caches/ipatool/sap/apple-assets-macos*; do [ -d \"$d\" ] && echo \"$d\"; done 2>/dev/null";
+    NSDictionary *result = [self setupTaskAndPipesWithCommandposix:kLaunchPathBash arg1:kBashCommandKey arg2:probe arg3:nil];
+    NSArray *lines = result[kstdOutput];
+    if ([lines isKindOfClass:[NSArray class]]) {
+        for (NSString *line in lines) {
+            if ([line containsString:@"apple-assets-macos"]) {
+                return NO;
+            }
+        }
+        return YES;
+    }
+
+    // Shell unavailable: fall back to our own HOME.
     const char *homeEnv = getenv("HOME");
     NSString *home = homeEnv ? [NSString stringWithUTF8String:homeEnv] : NSHomeDirectory();
     NSString *sapDir = [home stringByAppendingPathComponent:@"Library/Caches/ipatool/sap"];

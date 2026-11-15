@@ -135,9 +135,6 @@
     NSString *loadingMessage = (self.limitSearch > APPS_SEARCH_INITIAL_LIMIT)
         ? [NSString stringWithFormat:@"Fetching more results for “%@”…", self.latestSearchTerm]
         : [NSString stringWithFormat:@"Searching the App Store for “%@”…", self.latestSearchTerm];
-    if ([IPARUtils ipatoolNeedsFirstRunSetup]) {
-        loadingMessage = [loadingMessage stringByAppendingString:@"\nFirst-time setup: downloading Apple components (~75 MB). This can take 5 minutes or more — keep the app open."];
-    }
     [IPARUtils presentLoadingDialogWithMessage:loadingMessage on:self];
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
@@ -164,20 +161,26 @@
 
 - (void)populateTableWithSearchResults {
     [self.searchResults removeAllObjects];
-    for (NSDictionary *dictForApp in self.lastCommandResult[@"apps"]) {
-        NSMutableDictionary *appResultDict = [NSMutableDictionary dictionary];
-        appResultDict = [dictForApp mutableCopy];
-        [IPARUtils getAppIconFromApple:dictForApp[kAppBundleIndex] completion:^(UIImage * _Nullable appIcon) {
+    NSArray *apps = self.lastCommandResult[@"apps"];
+    UIImage *placeholder = [UIImage systemImageNamed:kUnknownSystemImage];
+
+    // Show results first; icons are filled in once fetched.
+    for (NSDictionary *dictForApp in apps) {
+        NSMutableDictionary *appResultDict = [dictForApp mutableCopy];
+        appResultDict[kAppimageIndex] = placeholder;
+        [self.searchResults addObject:appResultDict];
+    }
+    [self.tableView reloadData];
+
+    [IPARUtils getAppIconsFromApple:apps country:self.lastCommandResult[@"country"] completion:^(NSDictionary<NSString *, UIImage *> *icons) {
+        for (NSMutableDictionary *appResultDict in self.searchResults) {
+            UIImage *appIcon = icons[appResultDict[kAppBundleIndex]];
             if (appIcon) {
                 appResultDict[kAppimageIndex] = appIcon;
-            } else {
-                appResultDict[kAppimageIndex] = [UIImage systemImageNamed:kUnknownSystemImage];
             }
-            [self.searchResults addObject:appResultDict];
-            [self.tableView reloadData];
-        }];
-    }        
-    
+        }
+        [self.tableView reloadData];
+    }];
 }
 
 #pragma mark - Table View Data Source

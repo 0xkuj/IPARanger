@@ -35,7 +35,7 @@ typedef void (^AlertTextFieldBlock)(UITextField *);
 + (void)saveKeyToFile:(NSString *)key withValue:(NSString *)value;
 + (void)accountDetailsToFile:(NSString *)userEmail authName:(NSString *)authName authenticated:(NSString *)authenticated;
 + (NSString *)emojiFlagForISOCountryCode:(NSString *)countryCode;
-+ (void)getAppIconFromApple:(NSString *)bundleId completion:(void (^)(UIImage *appIcon))completion;
++ (void)getAppIconsFromApple:(NSArray<NSDictionary *> *)apps country:(NSString *)country completion:(void (^)(NSDictionary<NSString *, UIImage *> *icons))completion;
 + (NSString *)humanReadableSizeForBytes:(long long)bytes;
 + (void)animateClickOnCell:(UITableViewCell *)cell;
 + (void)presentDialogWithTitle:(NSString *)title 
